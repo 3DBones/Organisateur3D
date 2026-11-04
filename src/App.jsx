@@ -9,10 +9,8 @@ import {
   RotateCcw, 
   Lock, 
   Layers, 
-  Download, 
   Eye,
   Trash2,
-  Share2,
   Send,
   Check,
   Copy,
@@ -22,8 +20,8 @@ import {
   ShoppingBag,
   Smartphone,
   CheckCircle,
-  PackageCheck,
-  MousePointerClick
+  MousePointerClick,
+  Info
 } from 'lucide-react';
 
 const getDimensionColor = (colSpan, rowSpan) => {
@@ -51,7 +49,7 @@ const create3DrTextShapes = (scale = 1) => {
   const shapes = [];
   const sw = 3.2 * scale;
 
-  // Lettre "3"
+  // Letter "3"
   const s3 = new THREE.Shape();
   const ox3 = -14 * scale;
   const oy3 = -7 * scale;
@@ -71,7 +69,7 @@ const create3DrTextShapes = (scale = 1) => {
   s3.lineTo(ox3, oy3 + 8 * scale - sw);
   shapes.push(s3);
 
-  // Lettre "D"
+  // Letter "D"
   const sD = new THREE.Shape();
   const oxD = -2 * scale;
   const oyD = -8 * scale;
@@ -91,7 +89,7 @@ const create3DrTextShapes = (scale = 1) => {
   sD.holes.push(holeD);
   shapes.push(sD);
 
-  // Lettre "r"
+  // Letter "r"
   const sr = new THREE.Shape();
   const oxr = 13.5 * scale;
   const oyr = -8 * scale;
@@ -287,6 +285,7 @@ export default function App() {
 
   const [heightMarginInput, setHeightMarginInput] = useState('2');
   const [heightMargin, setHeightMargin] = useState(2);
+
   const [gridSize] = useState({ rows: 4, cols: 4 });
 
   const defaultLayout = [
@@ -346,53 +345,13 @@ export default function App() {
   const gridContainerRef = useRef(null);
 
   const [showShareModal, setShowShareModal] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [orderSent, setOrderSent] = useState(false);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const configParam = params.get('config');
-    if (configParam) {
-      try {
-        const decoded = JSON.parse(decodeURIComponent(atob(configParam)));
-        if (decoded.drawerInputs) setDrawerInputs(decoded.drawerInputs);
-        if (decoded.drawer) setDrawer(decoded.drawer);
-        if (decoded.heightMarginInput !== undefined) {
-          setHeightMarginInput(String(decoded.heightMarginInput));
-          setHeightMargin(parseFloat(decoded.heightMarginInput) || 0);
-        }
-        if (decoded.layout) setLayout(decoded.layout);
-        if (decoded.customColors) setCustomColors(decoded.customColors);
-      } catch (e) {
-        console.error("Erreur de chargement", e);
-      }
-    }
-  }, []);
 
   const handleHeightMarginChange = (val) => {
     setHeightMarginInput(val);
     const num = parseFloat(val);
     setHeightMargin(!isNaN(num) && num >= 0 ? num : 0);
-  };
-
-  const getShareableUrl = () => {
-    const config = {
-      drawerInputs,
-      drawer,
-      heightMarginInput,
-      layout,
-      customColors
-    };
-    const encoded = btoa(encodeURIComponent(JSON.stringify(config)));
-    const baseUrl = window.location.origin + window.location.pathname;
-    return `${baseUrl}?config=${encoded}`;
-  };
-
-  const copyShareLink = () => {
-    navigator.clipboard.writeText(getShareableUrl());
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
   };
 
   const calculateBoxCost = (box) => {
@@ -422,19 +381,6 @@ export default function App() {
   const shippingCost = boxes.length > 0 ? pricingSettings.shippingCostBE : 0;
   const totalPrice = boxesSubtotal + shippingCost;
 
-  const downloadBoxSTL = (box, filename) => {
-    const stlData = generateBoxSTL(box);
-    const blob = new Blob([stlData], { type: 'model/stl' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename || `boite_3dr_${box.width}x${box.depth}x${box.height}mm.stl`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   const getOrderSummaryText = () => {
     let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
     summary += `--- COORDONNÉES CLIENT (BELGIQUE) ---\n`;
@@ -445,21 +391,22 @@ export default function App() {
     if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
     if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
 
-    summary += `--- INFORMATIONS TECHNIQUES & TARIFS ---\n`;
+    summary += `--- INFORMATIONS TECHNIQUES & TARIFS ESTIMÉS ---\n`;
     summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
     summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
     summary += `Gravure du texte "3Dr" : Enfoncement 0.8mm sous le fond\n`;
     summary += `Nombre de compartiments : ${boxes.length}\n`;
     summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
-    summary += `Livraison (Mondial Relay - Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
-    summary += `PRIX TOTAL : ${totalPrice.toFixed(2)} €\n\n`;
-    summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
+    summary += `Livraison Mondial Relay (Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
+    summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
+    summary += `--- DÉTAIL DES COMPARTIMENTS & STL SÉCURISÉS ---\n`;
     
     boxes.forEach((b, idx) => {
-      summary += `#${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm [Couleur: ${b.color}]\n`;
+      summary += `\n[COMPARTIMENT #${idx + 1} : ${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}]\n`;
+      // Inclusion sécurisée du code STL textuel directement dans l'e-mail reçu par le vendeur
+      summary += generateBoxSTL(b) + `\n----------------------------------------\n`;
     });
 
-    summary += `\nLien interactif de la configuration :\n${getShareableUrl()}`;
     return summary;
   };
 
@@ -470,18 +417,10 @@ export default function App() {
   };
 
   const sendEmailOrder = () => {
-    const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (${totalPrice.toFixed(2)} €)`);
+    const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (Estimation ${totalPrice.toFixed(2)} €)`);
     const body = encodeURIComponent(getOrderSummaryText());
     window.open(`mailto:3dr.global@gmail.com?subject=${subject}&body=${body}`);
     setOrderSent(true);
-  };
-
-  const downloadAllSTLs = () => {
-    boxes.forEach((box, idx) => {
-      setTimeout(() => {
-        downloadBoxSTL(box, `boite_${idx+1}_${box.width}x${box.depth}x${box.height}mm_3dr.stl`);
-      }, idx * 250);
-    });
   };
 
   const mountRef = useRef(null);
@@ -846,6 +785,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
+      {/* HEADER TOP BAR */}
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
@@ -859,19 +799,11 @@ export default function App() {
 
         <div className="flex items-center space-x-2 sm:space-x-3">
           <button
-            onClick={copyShareLink}
-            className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200 cursor-pointer min-h-[38px]"
-          >
-            {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4 text-slate-600" />}
-            <span className="hidden sm:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
-          </button>
-
-          <button
             onClick={() => setShowShareModal(true)}
             className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer min-h-[38px]"
           >
             <Send className="w-4 h-4" />
-            <span>Commander</span>
+            <span>Passer Commande</span>
           </button>
 
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 sm:px-4 py-1 flex items-center gap-2 min-h-[38px]">
@@ -879,13 +811,14 @@ export default function App() {
               <Euro className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Prix Total</span>
+              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Estimation Total</span>
               <span className="text-xs sm:text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
             </div>
           </div>
         </div>
       </header>
 
+      {/* MOBILE TABS */}
       <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0 z-20">
         <button
           onClick={() => setMobileTab('2d')}
@@ -907,13 +840,14 @@ export default function App() {
         </button>
       </div>
 
+      {/* ORDER MODAL */}
       {showShareModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-800">Passer Commande / Exporter</h3>
+                <h3 className="text-sm font-bold text-slate-800">Passer Commande</h3>
               </div>
               <button 
                 onClick={() => setShowShareModal(false)}
@@ -927,11 +861,8 @@ export default function App() {
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Demande de Devis & Coordonnées
+                    <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Coordonnées de Livraison (Belgique)
                   </h4>
-                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                    Option 2 : Validation préalable
-                  </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
@@ -980,6 +911,7 @@ export default function App() {
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                 />
 
+                {/* MODAL SHIPPING DETAILED BREAKDOWN */}
                 <div className="p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 mt-2">
                   <div className="flex justify-between items-center text-slate-700 font-semibold">
                     <span>Sous-total boîtes :</span>
@@ -993,7 +925,7 @@ export default function App() {
                     <span>{shippingCost.toFixed(2)} €</span>
                   </div>
                   <div className="border-t border-indigo-200 pt-1 flex justify-between items-center text-indigo-900 font-black text-sm">
-                    <span>Total de la demande :</span>
+                    <span>PRIX ESTIMÉ TOTAL :</span>
                     <span>{totalPrice.toFixed(2)} €</span>
                   </div>
                 </div>
@@ -1021,49 +953,16 @@ export default function App() {
                   <CheckCircle className="w-4 h-4 text-emerald-600" /> Commande initiée ! Merci.
                 </div>
               )}
-
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Lien direct de la configuration</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={getShareableUrl()}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-mono text-slate-600 select-all"
-                  />
-                  <button
-                    onClick={copyShareLink}
-                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition min-h-[38px]"
-                  >
-                    {copiedLink ? 'Copié' : 'Copier'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-200">
-                <div className="flex items-center justify-between bg-slate-100 p-3 rounded-xl border border-slate-200">
-                  <div>
-                    <h5 className="font-bold text-slate-800 flex items-center gap-1.5">
-                      <PackageCheck className="w-4 h-4 text-emerald-600" /> Espace Impression (Vendeur 3Dr)
-                    </h5>
-                    <p className="text-[10px] text-slate-500">Télécharger les {boxes.length} fichiers STL avec gravure "3Dr" sous le fond.</p>
-                  </div>
-                  <button
-                    onClick={downloadAllSTLs}
-                    className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 min-h-[40px]"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>TOUS LES STL</span>
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* MAIN VIEW CONTENT AREA */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* SIDEBAR & CONTROL PANEL */}
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
+          {/* DRAWER DIMENSIONS */}
           <div className="p-4 border-b border-slate-100 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
@@ -1150,6 +1049,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* 2D INTERACTIVE GRID PLANNER */}
           <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1160,6 +1060,7 @@ export default function App() {
                 <button
                   onClick={clearLayout}
                   className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
+                  title="Vider le tiroir"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Vider
@@ -1167,6 +1068,7 @@ export default function App() {
                 <button
                   onClick={resetLayoutToDefault}
                   className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
+                  title="Réinitialiser"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -1256,6 +1158,7 @@ export default function App() {
             )}
           </div>
 
+          {/* BOXES LIST & COLOR SELECTOR */}
           <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1263,6 +1166,12 @@ export default function App() {
                 Boîtes à Imprimer ({boxes.length})
               </h2>
             </div>
+
+            {/* COLOR SELECTION HINT */}
+            <p className="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-100 p-2 rounded-lg mb-2 flex items-center gap-1.5 font-medium">
+              <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>Vous pouvez sélectionner la couleur en cliquant sur le rond de couleur.</span>
+            </p>
 
             <div className="space-y-2">
               {boxes.map((box, idx) => {
@@ -1286,8 +1195,9 @@ export default function App() {
                               e.stopPropagation();
                               setActiveColorPickerId(isPickerOpen ? null : box.id);
                             }}
-                            className="w-6 h-6 rounded-full flex-shrink-0 border border-black/20 hover:scale-110 transition-transform shadow-sm cursor-pointer"
+                            className="w-7 h-7 rounded-full flex-shrink-0 border-2 border-white ring-2 ring-slate-200 hover:scale-110 transition-transform shadow-xs cursor-pointer"
                             style={{ backgroundColor: box.color }}
+                            title="Changer la couleur"
                           />
                         </div>
 
@@ -1298,16 +1208,6 @@ export default function App() {
                           </p>
                         </div>
                       </div>
-
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadBoxSTL(box);
-                        }}
-                        className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition min-h-[36px]"
-                      >
-                        <Download className="w-4 h-4" />
-                      </button>
                     </div>
 
                     {isPickerOpen && (
@@ -1323,6 +1223,7 @@ export default function App() {
                               setActiveColorPickerId(null);
                             }}
                             className="flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-slate-100 transition group cursor-pointer"
+                            title={c.name}
                           >
                             <span 
                               className="w-5 h-5 rounded-full border border-black/20 group-hover:scale-110 transition-transform shadow-xs" 
@@ -1340,6 +1241,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* 3D CANVAS VIEW AREA */}
         <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[350px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
