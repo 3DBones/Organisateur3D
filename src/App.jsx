@@ -22,10 +22,11 @@ import {
   ShoppingBag,
   Smartphone,
   CheckCircle,
-  PackageCheck
+  PackageCheck,
+  MousePointerClick
 } from 'lucide-react';
 
-// Attribution d'une couleur basée sur les dimensions
+// Color assignment based on layout spans
 const getDimensionColor = (colSpan, rowSpan) => {
   const key = `${colSpan}x${rowSpan}`;
   const colorMap = {
@@ -47,11 +48,11 @@ const getDimensionColor = (colSpan, rowSpan) => {
   return colorMap[key] || '#64748b';
 };
 
-// Génération des formes Three.js du Logo 3Dr pour l'incrustation sous la boîte
+// Generate 3Dr Logo vector paths for 3D bottom embossing
 const createLogoShapes = (scale = 1) => {
   const shapes = [];
 
-  // 1. Cercle extérieur (Anneau)
+  // Outer Circle
   const outerCircle = new THREE.Shape();
   const rOut = 18 * scale;
   const rIn = 16.2 * scale;
@@ -61,7 +62,7 @@ const createLogoShapes = (scale = 1) => {
   outerCircle.holes.push(innerHole);
   shapes.push(outerCircle);
 
-  // 2. Ligne de guidage horizontale
+  // Horizontal guide line
   const line = new THREE.Shape();
   const lw = 28 * scale;
   const lh = 0.8 * scale;
@@ -72,7 +73,7 @@ const createLogoShapes = (scale = 1) => {
   line.lineTo(-lw / 2, ly + lh / 2);
   shapes.push(line);
 
-  // 3. Tête d'impression (Buse + Corps rectangulaire)
+  // Printhead nozzle
   const nozzle = new THREE.Shape();
   const nw = 9 * scale;
   const nh = 6.5 * scale;
@@ -87,7 +88,7 @@ const createLogoShapes = (scale = 1) => {
   nozzle.lineTo(0, nTop - nh - 3 * scale);
   shapes.push(nozzle);
 
-  // 4. Lettre "3"
+  // Letter "3"
   const s3 = new THREE.Shape();
   const ox3 = -9.5 * scale;
   const oy3 = -8 * scale;
@@ -107,7 +108,7 @@ const createLogoShapes = (scale = 1) => {
   s3.lineTo(ox3, oy3 + 10.6 * scale);
   shapes.push(s3);
 
-  // 5. Lettre "D"
+  // Letter "D"
   const sD = new THREE.Shape();
   const oxD = -1 * scale;
   const oyD = -8 * scale;
@@ -126,7 +127,7 @@ const createLogoShapes = (scale = 1) => {
   sD.holes.push(holeD);
   shapes.push(sD);
 
-  // 6. Lettre "r"
+  // Letter "r"
   const sr = new THREE.Shape();
   const oxr = 10.5 * scale;
   const oyr = -8 * scale;
@@ -143,7 +144,7 @@ const createLogoShapes = (scale = 1) => {
   return shapes;
 };
 
-// Générateur STL Pro avec gravure du logo 3Dr en creux (0.8 mm) sous la boîte
+// High-precision STL generator with logo embossing
 const generateBoxSTL = (box) => {
   const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
   const radius = 8;
@@ -191,7 +192,7 @@ const generateBoxSTL = (box) => {
     addFacet(normal, v1, v3, v4);
   };
 
-  // 1. Fond extérieur (Z = 0)
+  // Outer Bottom
   const centerOuter = [w / 2, d / 2, 0];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
@@ -200,7 +201,7 @@ const generateBoxSTL = (box) => {
     addFacet([0, 0, -1], centerOuter, p1, p2);
   }
 
-  // 2. Parois extérieures
+  // Outer Walls
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
@@ -217,7 +218,7 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p2, p2h, p1h, [nx, ny, 0]);
   }
 
-  // 3. Fond intérieur (Z = b)
+  // Inner Bottom
   const centerInner = [w / 2, d / 2, b];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
@@ -226,7 +227,7 @@ const generateBoxSTL = (box) => {
     addFacet([0, 0, 1], centerInner, p2, p1);
   }
 
-  // 4. Parois intérieures
+  // Inner Walls
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [innerPoly[i][0], innerPoly[i][1], b];
@@ -243,7 +244,7 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p1h, p2h, p2, [nx, ny, 0]);
   }
 
-  // 5. Bord supérieur (Z = h)
+  // Upper Rim
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const o1 = [outerPoly[i][0], outerPoly[i][1], h];
@@ -254,7 +255,7 @@ const generateBoxSTL = (box) => {
     addQuad(o1, o2, i2, i1, [0, 0, 1]);
   }
 
-  // 6. Gravure du Logo 3Dr en creux (0.8 mm)
+  // Embossed Logo
   const scale = Math.min(w, d) < 60 ? 0.7 : 1.0;
   const logoShapes = createLogoShapes(scale);
 
@@ -296,7 +297,7 @@ const generateBoxSTL = (box) => {
   return stl;
 };
 
-// Forme 2D arrondie pour Three.js
+// Create 2D rounded box shape for Three.js
 const createRoundedBoxShape = (width, depth, radius = 8) => {
   const shape = new THREE.Shape();
   const r = Math.min(radius, width / 2 - 0.1, depth / 2 - 0.1);
@@ -379,6 +380,7 @@ export default function App() {
     { name: 'Gris', hex: '#64748b' }
   ];
 
+  // Mouse / Touch Selection states for Grid
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
   const [selectionEnd, setSelectionEnd] = useState(null);
@@ -576,10 +578,18 @@ export default function App() {
     setBoxes(computedBoxes);
   }, [drawer, heightMargin, layout, customColors]);
 
-  const handleCellMouseDown = (r, c) => {
-    setIsMouseDown(true);
-    setSelectionStart({ row: r, col: c });
-    setSelectionEnd({ row: r, col: c });
+  // Touch and Click Handlers for 2D Grid Selection
+  const handleCellClick = (r, c) => {
+    // If no start position or already completed selection, start new selection
+    if (!selectionStart || (selectionStart && selectionEnd)) {
+      setSelectionStart({ row: r, col: c });
+      setSelectionEnd({ row: r, col: c });
+      setIsMouseDown(true);
+    } else {
+      // Tap second point to solidify selection area
+      setSelectionEnd({ row: r, col: c });
+      setIsMouseDown(false);
+    }
   };
 
   const handleCellMouseEnter = (r, c) => {
@@ -589,7 +599,9 @@ export default function App() {
   };
 
   const handleMouseUp = () => {
-    setIsMouseDown(false);
+    if (isMouseDown) {
+      setIsMouseDown(false);
+    }
   };
 
   const getSelectionBounds = () => {
@@ -634,12 +646,12 @@ export default function App() {
     setSelectionEnd(null);
   };
 
-  // Initialisation et boucle de rendu Three.js
+  // Three.js Scene Setup
   useEffect(() => {
     if (!mountRef.current) return;
 
-    const width = mountRef.current.clientWidth || 600;
-    const height = mountRef.current.clientHeight || 500;
+    const width = mountRef.current.clientWidth || 350;
+    const height = mountRef.current.clientHeight || 450;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#f1f5f9');
@@ -695,7 +707,7 @@ export default function App() {
     };
 
     window.addEventListener('resize', handleResize);
-    const timer = setTimeout(handleResize, 100);
+    const timer = setTimeout(handleResize, 150);
 
     return () => {
       clearTimeout(timer);
@@ -707,7 +719,7 @@ export default function App() {
     };
   }, []);
 
-  // Forcer le redimensionnement lors du passage d'onglet
+  // Handle Tab Switch Canvas Redraws for Mobile
   useEffect(() => {
     if (mountRef.current && rendererRef.current && cameraRef.current) {
       const timer = setTimeout(() => {
@@ -718,12 +730,12 @@ export default function App() {
           cameraRef.current.updateProjectionMatrix();
           rendererRef.current.setSize(w, h);
         }
-      }, 100);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [mobileTab]);
 
-  // Redessiner les objets 3D à chaque modification des boîtes
+  // Redraw 3D Mesh on layout / box updates
   useEffect(() => {
     if (!sceneRef.current || !boxesGroupRef.current) return;
 
@@ -849,7 +861,8 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
-      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
+      {/* HEADER TOP BAR */}
+      <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
             <Box className="w-5 h-5" />
@@ -863,54 +876,56 @@ export default function App() {
         <div className="flex items-center space-x-2 sm:space-x-3">
           <button
             onClick={copyShareLink}
-            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200 cursor-pointer"
+            className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200 cursor-pointer min-h-[38px]"
             title="Copier le lien"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-slate-600" />}
-            <span className="hidden sm:inline">{copiedLink ? 'Lien copié !' : 'Partager'}</span>
+            {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4 text-slate-600" />}
+            <span className="hidden sm:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
           </button>
 
           <button
             onClick={() => setShowShareModal(true)}
-            className="px-3 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer"
+            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer min-h-[38px]"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-4 h-4" />
             <span>Commander</span>
           </button>
 
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 sm:px-4 py-1 flex items-center gap-2">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 sm:px-4 py-1 flex items-center gap-2 min-h-[38px]">
             <div className="p-1 bg-emerald-500 rounded-lg text-white">
               <Euro className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block">Prix Total</span>
+              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Prix Total</span>
               <span className="text-xs sm:text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0">
+      {/* MOBILE TABS (SLIDE BAR FOR SMALL SCREENS) */}
+      <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0 z-20">
         <button
           onClick={() => setMobileTab('2d')}
-          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 ${mobileTab === '2d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+          className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === '2d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
         >
-          <Grid className="w-3.5 h-3.5" /> Plan 2D
+          <Grid className="w-4 h-4" /> Plan 2D
         </button>
         <button
           onClick={() => setMobileTab('3d')}
-          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 ${mobileTab === '3d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+          className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === '3d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
         >
-          <Eye className="w-3.5 h-3.5" /> Vue 3D
+          <Eye className="w-4 h-4" /> Vue 3D
         </button>
         <button
           onClick={() => setMobileTab('list')}
-          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 ${mobileTab === 'list' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+          className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === 'list' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
         >
-          <Layers className="w-3.5 h-3.5" /> Boîtes ({boxes.length})
+          <Layers className="w-4 h-4" /> Boîtes ({boxes.length})
         </button>
       </div>
 
+      {/* SHARE / ORDER MODAL */}
       {showShareModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
@@ -921,16 +936,16 @@ export default function App() {
               </div>
               <button 
                 onClick={() => setShowShareModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 transition"
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-200 transition"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
                 <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Vos Coordonnées (pour la livraison)
+                  <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Vos Coordonnées
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
@@ -938,14 +953,14 @@ export default function App() {
                     placeholder="Nom complet *"
                     value={clientInfo.name}
                     onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
-                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                   />
                   <input
                     type="email"
                     placeholder="Adresse Email *"
                     value={clientInfo.email}
                     onChange={(e) => setClientInfo({ ...clientInfo, email: e.target.value })}
-                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                   />
                 </div>
                 <input
@@ -953,21 +968,21 @@ export default function App() {
                   placeholder="Téléphone (optionnel)"
                   value={clientInfo.phone}
                   onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                 />
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={sendEmailOrder}
-                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200 cursor-pointer"
+                  className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200 cursor-pointer min-h-[44px]"
                 >
                   <Send className="w-4 h-4" />
                   Envoyer la commande par Email
                 </button>
                 <button
                   onClick={copyOrderSummary}
-                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition flex items-center justify-center gap-2 border border-slate-200 cursor-pointer"
+                  className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition flex items-center justify-center gap-2 border border-slate-200 cursor-pointer min-h-[44px]"
                 >
                   {copiedSummary ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                   {copiedSummary ? 'Copié !' : 'Copier Récapitulatif'}
@@ -987,11 +1002,11 @@ export default function App() {
                     type="text"
                     readOnly
                     value={getShareableUrl()}
-                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-mono text-slate-600 select-all"
+                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-mono text-slate-600 select-all"
                   />
                   <button
                     onClick={copyShareLink}
-                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition"
+                    className="px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition min-h-[38px]"
                   >
                     {copiedLink ? 'Copié' : 'Copier'}
                   </button>
@@ -1008,9 +1023,9 @@ export default function App() {
                   </div>
                   <button
                     onClick={downloadAllSTLs}
-                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                    className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0 min-h-[40px]"
                   >
-                    <Download className="w-3.5 h-3.5" />
+                    <Download className="w-4 h-4" />
                     <span>TOUS LES STL</span>
                   </button>
                 </div>
@@ -1020,8 +1035,11 @@ export default function App() {
         </div>
       )}
 
+      {/* MAIN VIEW CONTENT AREA */}
       <div className="flex-1 flex overflow-hidden relative">
+        {/* SIDEBAR & CONTROL PANEL */}
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
+          {/* DRAWER DIMENSIONS */}
           <div className="p-4 border-b border-slate-100 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
@@ -1035,7 +1053,7 @@ export default function App() {
                   type="number"
                   value={drawerInputs.width}
                   onChange={(e) => handleDrawerInputChange('width', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -1044,7 +1062,7 @@ export default function App() {
                   type="number"
                   value={drawerInputs.depth}
                   onChange={(e) => handleDrawerInputChange('depth', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
@@ -1053,7 +1071,7 @@ export default function App() {
                   type="number"
                   value={drawerInputs.height}
                   onChange={(e) => handleDrawerInputChange('height', e.target.value)}
-                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -1075,9 +1093,9 @@ export default function App() {
                     min="0"
                     value={heightMarginInput}
                     onChange={(e) => handleHeightMarginChange(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
+                    className="w-full px-2.5 py-2 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
                   />
-                  <span className="absolute right-2 top-1.5 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
+                  <span className="absolute right-2 top-2 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
                 </div>
               </div>
             </div>
@@ -1108,6 +1126,7 @@ export default function App() {
             </div>
           </div>
 
+          {/* 2D INTERACTIVE GRID PLANNER */}
           <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1117,23 +1136,28 @@ export default function App() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={clearLayout}
-                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
+                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
                   title="Vider le tiroir"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-3.5 h-3.5" />
                   Vider
                 </button>
                 <button
                   onClick={resetLayoutToDefault}
-                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
+                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
                   title="Réinitialiser"
                 >
-                  <RotateCcw className="w-3 h-3" />
+                  <RotateCcw className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            <div className="relative w-full aspect-square border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none">
+            <p className="text-[10px] text-slate-500 mb-2 flex items-center gap-1">
+              <MousePointerClick className="w-3 h-3 text-indigo-500" />
+              <span>Sur mobile : Touchez 1 case puis touchez la 2nde pour sélectionner.</span>
+            </p>
+
+            <div className="relative w-full aspect-square border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none">
               <div className="absolute inset-0 z-0">
                 {layout.map((b) => {
                   const leftPercent = (b.colStart / gridSize.cols) * 100;
@@ -1185,7 +1209,7 @@ export default function App() {
                   Array.from({ length: gridSize.cols }).map((_, c) => (
                     <div
                       key={`${r}-${c}`}
-                      onMouseDown={() => handleCellMouseDown(r, c)}
+                      onClick={() => handleCellClick(r, c)}
                       onMouseEnter={() => handleCellMouseEnter(r, c)}
                       className="w-full h-full"
                     />
@@ -1197,7 +1221,7 @@ export default function App() {
             {selectionBounds && (
               <button
                 onClick={mergeSelectedArea}
-                className="mt-3 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200 flex items-center justify-center gap-2"
+                className="mt-3 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200 flex items-center justify-center gap-2 min-h-[42px] cursor-pointer"
               >
                 <Combine className="w-4 h-4" />
                 Fusionner la zone ({selectionBounds.colSpan}×{selectionBounds.rowSpan})
@@ -1205,6 +1229,7 @@ export default function App() {
             )}
           </div>
 
+          {/* BOXES LIST & COLOR SELECTOR */}
           <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1213,7 +1238,7 @@ export default function App() {
               </h2>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {boxes.map((box, idx) => {
                 const isPickerOpen = activeColorPickerId === box.id;
 
@@ -1221,13 +1246,13 @@ export default function App() {
                   <div key={box.id} className="relative">
                     <div 
                       onClick={() => setSelectedBoxId(box.id === selectedBoxId ? null : box.id)}
-                      className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
+                      className={`p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
                         selectedBoxId === box.id 
                           ? 'border-indigo-500 bg-indigo-50/50 shadow-sm' 
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
-                      <div className="flex items-center space-x-2.5">
+                      <div className="flex items-center space-x-3">
                         <div className="relative">
                           <button
                             type="button"
@@ -1235,7 +1260,7 @@ export default function App() {
                               e.stopPropagation();
                               setActiveColorPickerId(isPickerOpen ? null : box.id);
                             }}
-                            className="w-4 h-4 rounded-full flex-shrink-0 border border-black/20 hover:scale-125 transition-transform shadow-sm cursor-pointer"
+                            className="w-6 h-6 rounded-full flex-shrink-0 border border-black/20 hover:scale-110 transition-transform shadow-sm cursor-pointer"
                             style={{ backgroundColor: box.color }}
                             title="Changer la couleur"
                           />
@@ -1254,10 +1279,10 @@ export default function App() {
                           e.stopPropagation();
                           downloadBoxSTL(box);
                         }}
-                        className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition"
+                        className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition min-h-[36px]"
                         title="Télécharger STL (avec logo 3Dr)"
                       >
-                        <Download className="w-3.5 h-3.5" />
+                        <Download className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -1292,13 +1317,13 @@ export default function App() {
           </div>
         </div>
 
-        {/* CONTENEUR 3D STABLE */}
-        <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[400px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
+        {/* 3D CANVAS VIEW AREA */}
+        <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[350px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
-          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-3 rounded-xl text-[11px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none z-10">
+          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-2.5 rounded-xl text-[10px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none z-10">
             <Eye className="w-4 h-4 text-indigo-600" />
-            <span>Glisser pour faire tourner la vue 3D (logo 3Dr gravé dessous)</span>
+            <span>Vue 3D (Glisser pour faire tourner)</span>
           </div>
         </div>
       </div>
