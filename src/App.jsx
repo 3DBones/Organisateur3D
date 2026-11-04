@@ -472,7 +472,7 @@ export default function App() {
   const sendEmailOrder = () => {
     const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (${totalPrice.toFixed(2)} €)`);
     const body = encodeURIComponent(getOrderSummaryText());
-    window.open(`mailto:contact@votre-boutique.com?subject=${subject}&body=${body}`);
+    window.open(`mailto:3dr.global@gmail.com?subject=${subject}&body=${body}`);
     setOrderSent(true);
   };
 
