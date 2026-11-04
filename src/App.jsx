@@ -26,7 +26,6 @@ import {
   MousePointerClick
 } from 'lucide-react';
 
-// Color assignment based on layout spans
 const getDimensionColor = (colSpan, rowSpan) => {
   const key = `${colSpan}x${rowSpan}`;
   const colorMap = {
@@ -48,103 +47,68 @@ const getDimensionColor = (colSpan, rowSpan) => {
   return colorMap[key] || '#64748b';
 };
 
-// Generate 3Dr Logo vector paths for 3D bottom embossing
-const createLogoShapes = (scale = 1) => {
+const create3DrTextShapes = (scale = 1) => {
   const shapes = [];
+  const sw = 3.2 * scale;
 
-  // Outer Circle
-  const outerCircle = new THREE.Shape();
-  const rOut = 18 * scale;
-  const rIn = 16.2 * scale;
-  outerCircle.absarc(0, 0, rOut, 0, Math.PI * 2, false);
-  const innerHole = new THREE.Path();
-  innerHole.absarc(0, 0, rIn, 0, Math.PI * 2, true);
-  outerCircle.holes.push(innerHole);
-  shapes.push(outerCircle);
-
-  // Horizontal guide line
-  const line = new THREE.Shape();
-  const lw = 28 * scale;
-  const lh = 0.8 * scale;
-  const ly = 7 * scale;
-  line.moveTo(-lw / 2, ly - lh / 2);
-  line.lineTo(lw / 2, ly - lh / 2);
-  line.lineTo(lw / 2, ly + lh / 2);
-  line.lineTo(-lw / 2, ly + lh / 2);
-  shapes.push(line);
-
-  // Printhead nozzle
-  const nozzle = new THREE.Shape();
-  const nw = 9 * scale;
-  const nh = 6.5 * scale;
-  const nTop = 13.5 * scale;
-  nozzle.moveTo(-nw / 2, nTop - nh);
-  nozzle.lineTo(nw / 2, nTop - nh);
-  nozzle.lineTo(nw / 2, nTop);
-  nozzle.lineTo(-nw / 2, nTop);
-  nozzle.lineTo(-nw / 2, nTop - nh);
-  nozzle.moveTo(-nw / 3, nTop - nh);
-  nozzle.lineTo(nw / 3, nTop - nh);
-  nozzle.lineTo(0, nTop - nh - 3 * scale);
-  shapes.push(nozzle);
-
-  // Letter "3"
+  // Lettre "3"
   const s3 = new THREE.Shape();
-  const ox3 = -9.5 * scale;
-  const oy3 = -8 * scale;
-  const sw = 1.4 * scale;
-  s3.moveTo(ox3, oy3 + 12 * scale);
-  s3.lineTo(ox3 + 7 * scale, oy3 + 12 * scale);
-  s3.lineTo(ox3 + 3 * scale, oy3 + 6.5 * scale);
-  s3.quadraticCurveTo(ox3 + 7.5 * scale, oy3 + 6 * scale, ox3 + 7.5 * scale, oy3 + 3 * scale);
-  s3.quadraticCurveTo(ox3 + 7.5 * scale, oy3, ox3 + 3.5 * scale, oy3);
-  s3.quadraticCurveTo(ox3, oy3, ox3, oy3 + 3 * scale);
-  s3.lineTo(ox3 + sw, oy3 + 3 * scale);
-  s3.quadraticCurveTo(ox3 + sw, oy3 + sw, ox3 + 3.5 * scale, oy3 + sw);
-  s3.quadraticCurveTo(ox3 + 5.5 * scale, oy3 + sw, ox3 + 5.5 * scale, oy3 + 3 * scale);
-  s3.quadraticCurveTo(ox3 + 5.5 * scale, oy3 + 5 * scale, ox3 + 2.5 * scale, oy3 + 5.2 * scale);
-  s3.lineTo(ox3 + 0.8 * scale, oy3 + 5.2 * scale);
-  s3.lineTo(ox3 + 4.8 * scale, oy3 + 10.6 * scale);
-  s3.lineTo(ox3, oy3 + 10.6 * scale);
+  const ox3 = -14 * scale;
+  const oy3 = -7 * scale;
+
+  s3.moveTo(ox3, oy3 + 14 * scale);
+  s3.lineTo(ox3 + 9 * scale, oy3 + 14 * scale);
+  s3.lineTo(ox3 + 9 * scale, oy3 + 14 * scale - sw);
+  s3.lineTo(ox3 + sw * 1.2, oy3 + 8 * scale);
+  s3.lineTo(ox3 + 5 * scale, oy3 + 8 * scale);
+  s3.quadraticCurveTo(ox3 + 9.5 * scale, oy3 + 8 * scale, ox3 + 9.5 * scale, oy3 + 3.5 * scale);
+  s3.quadraticCurveTo(ox3 + 9.5 * scale, oy3 - 1 * scale, ox3 + 4.5 * scale, oy3 - 1 * scale);
+  s3.lineTo(ox3, oy3 - 1 * scale);
+  s3.lineTo(ox3, oy3 + sw - 1 * scale);
+  s3.lineTo(ox3 + 4.5 * scale, oy3 + sw - 1 * scale);
+  s3.quadraticCurveTo(ox3 + 6.3 * scale, oy3 + sw - 1 * scale, ox3 + 6.3 * scale, oy3 + 3.5 * scale);
+  s3.quadraticCurveTo(ox3 + 6.3 * scale, oy3 + 8 * scale - sw, ox3 + 4 * scale, oy3 + 8 * scale - sw);
+  s3.lineTo(ox3, oy3 + 8 * scale - sw);
   shapes.push(s3);
 
-  // Letter "D"
+  // Lettre "D"
   const sD = new THREE.Shape();
-  const oxD = -1 * scale;
+  const oxD = -2 * scale;
   const oyD = -8 * scale;
+
   sD.moveTo(oxD, oyD);
-  sD.lineTo(oxD + 5 * scale, oyD);
-  sD.quadraticCurveTo(oxD + 10.5 * scale, oyD, oxD + 10.5 * scale, oyD + 6.5 * scale);
-  sD.quadraticCurveTo(oxD + 10.5 * scale, oyD + 13 * scale, oxD + 5 * scale, oyD + 13 * scale);
-  sD.lineTo(oxD, oyD + 13 * scale);
+  sD.lineTo(oxD + 6.5 * scale, oyD);
+  sD.quadraticCurveTo(oxD + 13.5 * scale, oyD, oxD + 13.5 * scale, oyD + 7.5 * scale);
+  sD.quadraticCurveTo(oxD + 13.5 * scale, oyD + 15 * scale, oxD + 6.5 * scale, oyD + 15 * scale);
+  sD.lineTo(oxD, oyD + 15 * scale);
   
   const holeD = new THREE.Path();
   holeD.moveTo(oxD + sw, oyD + sw);
-  holeD.lineTo(oxD + 5 * scale, oyD + sw);
-  holeD.quadraticCurveTo(oxD + 8.8 * scale, oyD + sw, oxD + 8.8 * scale, oyD + 6.5 * scale);
-  holeD.quadraticCurveTo(oxD + 8.8 * scale, oyD + 13 * scale - sw, oxD + 5 * scale, oyD + 13 * scale - sw);
-  holeD.lineTo(oxD + sw, oyD + 13 * scale - sw);
+  holeD.lineTo(oxD + 6 * scale, oyD + sw);
+  holeD.quadraticCurveTo(oxD + 10.3 * scale, oyD + sw, oxD + 10.3 * scale, oyD + 7.5 * scale);
+  holeD.quadraticCurveTo(oxD + 10.3 * scale, oyD + 15 * scale - sw, oxD + 6 * scale, oyD + 15 * scale - sw);
+  holeD.lineTo(oxD + sw, oyD + 15 * scale - sw);
   sD.holes.push(holeD);
   shapes.push(sD);
 
-  // Letter "r"
+  // Lettre "r"
   const sr = new THREE.Shape();
-  const oxr = 10.5 * scale;
+  const oxr = 13.5 * scale;
   const oyr = -8 * scale;
+
   sr.moveTo(oxr, oyr);
   sr.lineTo(oxr + sw, oyr);
   sr.lineTo(oxr + sw, oyr + 4.5 * scale);
-  sr.quadraticCurveTo(oxr + 2.5 * scale, oyr + 6.5 * scale, oxr + 4.5 * scale, oyr + 6.5 * scale);
-  sr.lineTo(oxr + 4.5 * scale, oyr + 5.2 * scale);
-  sr.quadraticCurveTo(oxr + 1.8 * scale, oyr + 5.2 * scale, oxr + sw, oyr + 3.8 * scale);
-  sr.lineTo(oxr + sw, oyr + 6.5 * scale);
-  sr.lineTo(oxr, oyr + 6.5 * scale);
+  sr.quadraticCurveTo(oxr + 2.5 * scale, oyr + 7.5 * scale, oxr + 6 * scale, oyr + 7.5 * scale);
+  sr.lineTo(oxr + 6 * scale, oyr + 7.5 * scale - sw);
+  sr.quadraticCurveTo(oxr + sw + 1 * scale, oyr + 7.5 * scale - sw, oxr + sw, oyr + 4.5 * scale);
+  sr.lineTo(oxr + sw, oyr + 8.5 * scale);
+  sr.lineTo(oxr, oyr + 8.5 * scale);
   shapes.push(sr);
 
   return shapes;
 };
 
-// High-precision STL generator with logo embossing
 const generateBoxSTL = (box) => {
   const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
   const radius = 8;
@@ -192,7 +156,6 @@ const generateBoxSTL = (box) => {
     addFacet(normal, v1, v3, v4);
   };
 
-  // Outer Bottom
   const centerOuter = [w / 2, d / 2, 0];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
@@ -201,7 +164,6 @@ const generateBoxSTL = (box) => {
     addFacet([0, 0, -1], centerOuter, p1, p2);
   }
 
-  // Outer Walls
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
@@ -218,7 +180,6 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p2, p2h, p1h, [nx, ny, 0]);
   }
 
-  // Inner Bottom
   const centerInner = [w / 2, d / 2, b];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
@@ -227,7 +188,6 @@ const generateBoxSTL = (box) => {
     addFacet([0, 0, 1], centerInner, p2, p1);
   }
 
-  // Inner Walls
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [innerPoly[i][0], innerPoly[i][1], b];
@@ -244,7 +204,6 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p1h, p2h, p2, [nx, ny, 0]);
   }
 
-  // Upper Rim
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const o1 = [outerPoly[i][0], outerPoly[i][1], h];
@@ -255,11 +214,10 @@ const generateBoxSTL = (box) => {
     addQuad(o1, o2, i2, i1, [0, 0, 1]);
   }
 
-  // Embossed Logo
-  const scale = Math.min(w, d) < 60 ? 0.7 : 1.0;
-  const logoShapes = createLogoShapes(scale);
+  const scale = Math.min(w, d) < 60 ? 0.6 : 1.0;
+  const textShapes = create3DrTextShapes(scale);
 
-  logoShapes.forEach((shape) => {
+  textShapes.forEach((shape) => {
     const points = shape.extractPoints(6);
     const shapeContour = points.shape;
 
@@ -297,7 +255,6 @@ const generateBoxSTL = (box) => {
   return stl;
 };
 
-// Create 2D rounded box shape for Three.js
 const createRoundedBoxShape = (width, depth, radius = 8) => {
   const shape = new THREE.Shape();
   const r = Math.min(radius, width / 2 - 0.1, depth / 2 - 0.1);
@@ -330,7 +287,6 @@ export default function App() {
 
   const [heightMarginInput, setHeightMarginInput] = useState('2');
   const [heightMargin, setHeightMargin] = useState(2);
-
   const [gridSize] = useState({ rows: 4, cols: 4 });
 
   const defaultLayout = [
@@ -359,13 +315,17 @@ export default function App() {
     kwhPrice: 0.25,
     printerPowerW: 150,
     laborFeePerBox: 0.10,
-    marginPercent: 300
+    marginPercent: 300,
+    shippingCostBE: 4.30
   });
 
   const [clientInfo, setClientInfo] = useState({
     name: '',
     email: '',
     phone: '',
+    address: '',
+    city: '',
+    postalCode: '',
     notes: ''
   });
 
@@ -380,10 +340,10 @@ export default function App() {
     { name: 'Gris', hex: '#64748b' }
   ];
 
-  // Mouse / Touch Selection states for Grid
-  const [isMouseDown, setIsMouseDown] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
   const [selectionEnd, setSelectionEnd] = useState(null);
+  const gridContainerRef = useRef(null);
 
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -435,26 +395,71 @@ export default function App() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
+  const calculateBoxCost = (box) => {
+    const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
+    const outerVolume = (w * d * h) / 1000;
+    const innerVolume = Math.max(0, ((w - 2 * t) * (d - 2 * t) * (h - b)) / 1000);
+    const materialVolumeCm3 = Math.max(0, outerVolume - innerVolume);
+    const weightGrams = materialVolumeCm3 * 1.24;
+    const materialCost = (weightGrams / 1000) * pricingSettings.plaPricePerKg;
+    const printTimeHours = materialVolumeCm3 / 18;
+    const electricityCost = (pricingSettings.printerPowerW / 1000) * printTimeHours * pricingSettings.kwhPrice;
+    const baseCost = materialCost + electricityCost + pricingSettings.laborFeePerBox;
+    const finalPrice = baseCost * (1 + pricingSettings.marginPercent / 100);
+
+    return {
+      weightGrams: Math.round(weightGrams),
+      printTimeHours: printTimeHours.toFixed(1),
+      finalPrice: Math.max(0.80, finalPrice)
+    };
+  };
+
+  const boxesSubtotal = boxes.reduce((acc, box) => {
+    const cost = calculateBoxCost(box);
+    return acc + cost.finalPrice;
+  }, 0);
+
+  const shippingCost = boxes.length > 0 ? pricingSettings.shippingCostBE : 0;
+  const totalPrice = boxesSubtotal + shippingCost;
+
+  const downloadBoxSTL = (box, filename) => {
+    const stlData = generateBoxSTL(box);
+    const blob = new Blob([stlData], { type: 'model/stl' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename || `boite_3dr_${box.width}x${box.depth}x${box.height}mm.stl`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const getOrderSummaryText = () => {
-    let summary = `=== COMMANDE ORGANISATEUR DE TIROIR (3Dr) ===\n\n`;
-    if (clientInfo.name) summary += `Client : ${clientInfo.name}\n`;
+    let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
+    summary += `--- COORDONNÉES CLIENT (BELGIQUE) ---\n`;
+    if (clientInfo.name) summary += `Nom : ${clientInfo.name}\n`;
     if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
     if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
+    if (clientInfo.address) summary += `Adresse / Point Relay : ${clientInfo.address}\n`;
+    if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
     if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
 
-    summary += `--- INFORMATIONS TECHNIQUES ---\n`;
+    summary += `--- INFORMATIONS TECHNIQUES & TARIFS ---\n`;
     summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
     summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
-    summary += `Gravure du logo 3Dr : Enfoncement 0.8mm sous le fond\n`;
+    summary += `Gravure du texte "3Dr" : Enfoncement 0.8mm sous le fond\n`;
     summary += `Nombre de compartiments : ${boxes.length}\n`;
-    summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
+    summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
+    summary += `Livraison (Mondial Relay - Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
+    summary += `PRIX TOTAL : ${totalPrice.toFixed(2)} €\n\n`;
     summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
     
     boxes.forEach((b, idx) => {
       summary += `#${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm [Couleur: ${b.color}]\n`;
     });
 
-    summary += `\nLien interactif :\n${getShareableUrl()}`;
+    summary += `\nLien interactif de la configuration :\n${getShareableUrl()}`;
     return summary;
   };
 
@@ -465,7 +470,7 @@ export default function App() {
   };
 
   const sendEmailOrder = () => {
-    const subject = encodeURIComponent(`Nouvelle Commande 3Dr (${totalPrice.toFixed(2)} €)`);
+    const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (${totalPrice.toFixed(2)} €)`);
     const body = encodeURIComponent(getOrderSummaryText());
     window.open(`mailto:contact@votre-boutique.com?subject=${subject}&body=${body}`);
     setOrderSent(true);
@@ -506,43 +511,6 @@ export default function App() {
     setSelectionEnd(null);
   };
 
-  const calculateBoxCost = (box) => {
-    const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
-    const outerVolume = (w * d * h) / 1000;
-    const innerVolume = Math.max(0, ((w - 2 * t) * (d - 2 * t) * (h - b)) / 1000);
-    const materialVolumeCm3 = Math.max(0, outerVolume - innerVolume);
-    const weightGrams = materialVolumeCm3 * 1.24;
-    const materialCost = (weightGrams / 1000) * pricingSettings.plaPricePerKg;
-    const printTimeHours = materialVolumeCm3 / 18;
-    const electricityCost = (pricingSettings.printerPowerW / 1000) * printTimeHours * pricingSettings.kwhPrice;
-    const baseCost = materialCost + electricityCost + pricingSettings.laborFeePerBox;
-    const finalPrice = baseCost * (1 + pricingSettings.marginPercent / 100);
-
-    return {
-      weightGrams: Math.round(weightGrams),
-      printTimeHours: printTimeHours.toFixed(1),
-      finalPrice: Math.max(0.80, finalPrice)
-    };
-  };
-
-  const totalPrice = boxes.reduce((acc, box) => {
-    const cost = calculateBoxCost(box);
-    return acc + cost.finalPrice;
-  }, 0);
-
-  const downloadBoxSTL = (box, filename) => {
-    const stlData = generateBoxSTL(box);
-    const blob = new Blob([stlData], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename || `boite_${box.width}x${box.depth}x${box.height}mm_3dr.stl`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   useEffect(() => {
     const unitWidth = drawer.width / gridSize.cols;
     const unitDepth = drawer.depth / gridSize.rows;
@@ -578,29 +546,49 @@ export default function App() {
     setBoxes(computedBoxes);
   }, [drawer, heightMargin, layout, customColors]);
 
-  // Touch and Click Handlers for 2D Grid Selection
-  const handleCellClick = (r, c) => {
-    // If no start position or already completed selection, start new selection
-    if (!selectionStart || (selectionStart && selectionEnd)) {
+  const getCellFromCoords = (clientX, clientY) => {
+    if (!gridContainerRef.current) return null;
+    const rect = gridContainerRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    if (x < 0 || x > rect.width || y < 0 || y > rect.height) return null;
+
+    const col = Math.min(gridSize.cols - 1, Math.max(0, Math.floor((x / rect.width) * gridSize.cols)));
+    const row = Math.min(gridSize.rows - 1, Math.max(0, Math.floor((y / rect.height) * gridSize.rows)));
+
+    return { row, col };
+  };
+
+  const handlePointerStart = (r, c) => {
+    if (selectionStart && !selectionEnd) {
+      setSelectionEnd({ row: r, col: c });
+      setIsSelecting(false);
+    } else {
       setSelectionStart({ row: r, col: c });
       setSelectionEnd({ row: r, col: c });
-      setIsMouseDown(true);
-    } else {
-      // Tap second point to solidify selection area
-      setSelectionEnd({ row: r, col: c });
-      setIsMouseDown(false);
+      setIsSelecting(true);
     }
   };
 
-  const handleCellMouseEnter = (r, c) => {
-    if (isMouseDown) {
+  const handleTouchMove = (e) => {
+    if (!isSelecting) return;
+    const touch = e.touches[0];
+    const cell = getCellFromCoords(touch.clientX, touch.clientY);
+    if (cell) {
+      setSelectionEnd(cell);
+    }
+  };
+
+  const handleMouseOver = (r, c) => {
+    if (isSelecting) {
       setSelectionEnd({ row: r, col: c });
     }
   };
 
   const handleMouseUp = () => {
-    if (isMouseDown) {
-      setIsMouseDown(false);
+    if (isSelecting) {
+      setIsSelecting(false);
     }
   };
 
@@ -646,7 +634,6 @@ export default function App() {
     setSelectionEnd(null);
   };
 
-  // Three.js Scene Setup
   useEffect(() => {
     if (!mountRef.current) return;
 
@@ -719,7 +706,6 @@ export default function App() {
     };
   }, []);
 
-  // Handle Tab Switch Canvas Redraws for Mobile
   useEffect(() => {
     if (mountRef.current && rendererRef.current && cameraRef.current) {
       const timer = setTimeout(() => {
@@ -735,7 +721,6 @@ export default function App() {
     }
   }, [mobileTab]);
 
-  // Redraw 3D Mesh on layout / box updates
   useEffect(() => {
     if (!sceneRef.current || !boxesGroupRef.current) return;
 
@@ -819,23 +804,23 @@ export default function App() {
       boxGroup.add(wallsMesh);
       boxGroup.add(bottomMesh);
 
-      const scale = Math.min(b.width, b.depth) < 60 ? 0.7 : 1.0;
-      const logoShapes = createLogoShapes(scale);
-      const logoMat = new THREE.MeshStandardMaterial({
+      const scale = Math.min(b.width, b.depth) < 60 ? 0.6 : 1.0;
+      const textShapes = create3DrTextShapes(scale);
+      const textMat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(b.color).clone().multiplyScalar(0.75),
         roughness: 0.5,
         side: THREE.DoubleSide
       });
 
-      logoShapes.forEach(shape => {
-        const logoGeo = new THREE.ExtrudeGeometry(shape, {
+      textShapes.forEach(shape => {
+        const textGeo = new THREE.ExtrudeGeometry(shape, {
           depth: 0.8,
           bevelEnabled: false
         });
-        logoGeo.rotateX(-Math.PI / 2);
-        const logoMesh = new THREE.Mesh(logoGeo, logoMat);
-        logoMesh.position.set(b.width / 2, 0, b.depth / 2);
-        boxGroup.add(logoMesh);
+        textGeo.rotateX(-Math.PI / 2);
+        const textMesh = new THREE.Mesh(textGeo, textMat);
+        textMesh.position.set(b.width / 2, 0, b.depth / 2);
+        boxGroup.add(textMesh);
       });
 
       boxGroup.position.set(b.x, 0, b.y);
@@ -861,7 +846,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
-      {/* HEADER TOP BAR */}
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
@@ -877,7 +861,6 @@ export default function App() {
           <button
             onClick={copyShareLink}
             className="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200 cursor-pointer min-h-[38px]"
-            title="Copier le lien"
           >
             {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4 text-slate-600" />}
             <span className="hidden sm:inline">{copiedLink ? 'Copié !' : 'Partager'}</span>
@@ -903,7 +886,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* MOBILE TABS (SLIDE BAR FOR SMALL SCREENS) */}
       <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0 z-20">
         <button
           onClick={() => setMobileTab('2d')}
@@ -925,7 +907,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* SHARE / ORDER MODAL */}
       {showShareModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
@@ -944,9 +925,14 @@ export default function App() {
 
             <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
-                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Vos Coordonnées
-                </h4>
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Demande de Devis & Coordonnées
+                  </h4>
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
+                    Option 2 : Validation préalable
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="text"
@@ -963,13 +949,54 @@ export default function App() {
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                   />
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <input
+                    type="tel"
+                    placeholder="Téléphone"
+                    value={clientInfo.phone}
+                    onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Code Postal (BE) *"
+                    value={clientInfo.postalCode}
+                    onChange={(e) => setClientInfo({ ...clientInfo, postalCode: e.target.value })}
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Ville (Belgique) *"
+                    value={clientInfo.city}
+                    onChange={(e) => setClientInfo({ ...clientInfo, city: e.target.value })}
+                    className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
+                  />
+                </div>
                 <input
-                  type="tel"
-                  placeholder="Téléphone (optionnel)"
-                  value={clientInfo.phone}
-                  onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
+                  type="text"
+                  placeholder="Adresse ou Point Mondial Relay souhaité en Belgique *"
+                  value={clientInfo.address}
+                  onChange={(e) => setClientInfo({ ...clientInfo, address: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                 />
+
+                <div className="p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 mt-2">
+                  <div className="flex justify-between items-center text-slate-700 font-semibold">
+                    <span>Sous-total boîtes :</span>
+                    <span>{boxesSubtotal.toFixed(2)} €</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-700 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span> 
+                      Livraison Mondial Relay (Uniquement Belgique) :
+                    </span>
+                    <span>{shippingCost.toFixed(2)} €</span>
+                  </div>
+                  <div className="border-t border-indigo-200 pt-1 flex justify-between items-center text-indigo-900 font-black text-sm">
+                    <span>Total de la demande :</span>
+                    <span>{totalPrice.toFixed(2)} €</span>
+                  </div>
+                </div>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
@@ -978,7 +1005,7 @@ export default function App() {
                   className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200 cursor-pointer min-h-[44px]"
                 >
                   <Send className="w-4 h-4" />
-                  Envoyer la commande par Email
+                  Envoyer la demande de devis
                 </button>
                 <button
                   onClick={copyOrderSummary}
@@ -1019,7 +1046,7 @@ export default function App() {
                     <h5 className="font-bold text-slate-800 flex items-center gap-1.5">
                       <PackageCheck className="w-4 h-4 text-emerald-600" /> Espace Impression (Vendeur 3Dr)
                     </h5>
-                    <p className="text-[10px] text-slate-500">Télécharger les {boxes.length} fichiers STL avec gravure 0.8mm sous le fond.</p>
+                    <p className="text-[10px] text-slate-500">Télécharger les {boxes.length} fichiers STL avec gravure "3Dr" sous le fond.</p>
                   </div>
                   <button
                     onClick={downloadAllSTLs}
@@ -1035,11 +1062,8 @@ export default function App() {
         </div>
       )}
 
-      {/* MAIN VIEW CONTENT AREA */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* SIDEBAR & CONTROL PANEL */}
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
-          {/* DRAWER DIMENSIONS */}
           <div className="p-4 border-b border-slate-100 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
@@ -1126,7 +1150,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 2D INTERACTIVE GRID PLANNER */}
           <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1137,7 +1160,6 @@ export default function App() {
                 <button
                   onClick={clearLayout}
                   className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
-                  title="Vider le tiroir"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Vider
@@ -1145,7 +1167,6 @@ export default function App() {
                 <button
                   onClick={resetLayoutToDefault}
                   className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
-                  title="Réinitialiser"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -1154,10 +1175,15 @@ export default function App() {
 
             <p className="text-[10px] text-slate-500 mb-2 flex items-center gap-1">
               <MousePointerClick className="w-3 h-3 text-indigo-500" />
-              <span>Sur mobile : Touchez 1 case puis touchez la 2nde pour sélectionner.</span>
+              <span>Faites glisser votre doigt ou tapez 2 cases pour fusionner.</span>
             </p>
 
-            <div className="relative w-full aspect-square border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none">
+            <div 
+              ref={gridContainerRef}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={() => setIsSelecting(false)}
+              className="relative w-full aspect-square border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none"
+            >
               <div className="absolute inset-0 z-0">
                 {layout.map((b) => {
                   const leftPercent = (b.colStart / gridSize.cols) * 100;
@@ -1209,8 +1235,9 @@ export default function App() {
                   Array.from({ length: gridSize.cols }).map((_, c) => (
                     <div
                       key={`${r}-${c}`}
-                      onClick={() => handleCellClick(r, c)}
-                      onMouseEnter={() => handleCellMouseEnter(r, c)}
+                      onMouseDown={() => handlePointerStart(r, c)}
+                      onTouchStart={() => handlePointerStart(r, c)}
+                      onMouseOver={() => handleMouseOver(r, c)}
                       className="w-full h-full"
                     />
                   ))
@@ -1229,7 +1256,6 @@ export default function App() {
             )}
           </div>
 
-          {/* BOXES LIST & COLOR SELECTOR */}
           <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1262,7 +1288,6 @@ export default function App() {
                             }}
                             className="w-6 h-6 rounded-full flex-shrink-0 border border-black/20 hover:scale-110 transition-transform shadow-sm cursor-pointer"
                             style={{ backgroundColor: box.color }}
-                            title="Changer la couleur"
                           />
                         </div>
 
@@ -1280,7 +1305,6 @@ export default function App() {
                           downloadBoxSTL(box);
                         }}
                         className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition min-h-[36px]"
-                        title="Télécharger STL (avec logo 3Dr)"
                       >
                         <Download className="w-4 h-4" />
                       </button>
@@ -1299,7 +1323,6 @@ export default function App() {
                               setActiveColorPickerId(null);
                             }}
                             className="flex flex-col items-center gap-1 p-1 rounded-lg hover:bg-slate-100 transition group cursor-pointer"
-                            title={c.name}
                           >
                             <span 
                               className="w-5 h-5 rounded-full border border-black/20 group-hover:scale-110 transition-transform shadow-xs" 
@@ -1317,7 +1340,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 3D CANVAS VIEW AREA */}
         <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[350px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
