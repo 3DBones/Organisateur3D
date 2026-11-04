@@ -4,7 +4,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { 
   Box, 
   Euro, 
-  Printer, 
   Maximize2, 
   Combine, 
   RotateCcw, 
@@ -18,43 +17,171 @@ import {
   Check,
   Copy,
   X,
-  Grid
+  Grid,
+  ArrowDown,
+  ShoppingBag,
+  Smartphone,
+  CheckCircle,
+  PackageCheck
 } from 'lucide-react';
 
-// Attribution d'une couleur basée sur les dimensions (colSpan x rowSpan)
+// Attribution d'une couleur basée sur les dimensions
 const getDimensionColor = (colSpan, rowSpan) => {
   const key = `${colSpan}x${rowSpan}`;
   const colorMap = {
-    '1x1': '#2563eb', // Bleu royal
-    '1x2': '#10b981', // Vert émeraude
-    '2x1': '#f97316', // Orange vif
-    '2x2': '#eab308', // Jaune doré vif
-    '1x3': '#ec4899', // Rose fuchsia
-    '3x1': '#06b6d4', // Cyan intense
-    '2x3': '#059669', // Vert menthe foncé
-    '3x2': '#14b8a6', // Turquoise
-    '3x3': '#6366f1', // Indigo
-    '4x1': '#84cc16', // Vert Lime
-    '1x4': '#d946ef', // Magenta
-    '4x2': '#dc2626', // Rouge vif
-    '2x4': '#9333ea', // Violet néon intense
-    '4x4': '#0284c7'  // Bleu océan
+    '1x1': '#2563eb',
+    '1x2': '#10b981',
+    '2x1': '#f97316',
+    '2x2': '#eab308',
+    '1x3': '#ec4899',
+    '3x1': '#06b6d4',
+    '2x3': '#059669',
+    '3x2': '#14b8a6',
+    '3x3': '#6366f1',
+    '4x1': '#84cc16',
+    '1x4': '#d946ef',
+    '4x2': '#dc2626',
+    '2x4': '#9333ea',
+    '4x4': '#0284c7'
   };
   return colorMap[key] || '#64748b';
 };
 
-// Fonction de génération STL binaire / ASCII pour les boîtes avec coins arrondis
+// Génération des formes Three.js du Logo 3Dr pour l'incrustation sous la boîte
+const createLogoShapes = (scale = 1) => {
+  const shapes = [];
+
+  // 1. Cercle extérieur (Anneau)
+  const outerCircle = new THREE.Shape();
+  const rOut = 18 * scale;
+  const rIn = 16.2 * scale;
+  outerCircle.absarc(0, 0, rOut, 0, Math.PI * 2, false);
+  const innerHole = new THREE.Path();
+  innerHole.absarc(0, 0, rIn, 0, Math.PI * 2, true);
+  outerCircle.holes.push(innerHole);
+  shapes.push(outerCircle);
+
+  // 2. Ligne de guidage horizontale
+  const line = new THREE.Shape();
+  const lw = 28 * scale;
+  const lh = 0.8 * scale;
+  const ly = 7 * scale;
+  line.moveTo(-lw / 2, ly - lh / 2);
+  line.lineTo(lw / 2, ly - lh / 2);
+  line.lineTo(lw / 2, ly + lh / 2);
+  line.lineTo(-lw / 2, ly + lh / 2);
+  shapes.push(line);
+
+  // 3. Tête d'impression (Buse + Corps rectangulaire)
+  const nozzle = new THREE.Shape();
+  const nw = 9 * scale;
+  const nh = 6.5 * scale;
+  const nTop = 13.5 * scale;
+  nozzle.moveTo(-nw / 2, nTop - nh);
+  nozzle.lineTo(nw / 2, nTop - nh);
+  nozzle.lineTo(nw / 2, nTop);
+  nozzle.lineTo(-nw / 2, nTop);
+  nozzle.lineTo(-nw / 2, nTop - nh);
+  nozzle.moveTo(-nw / 3, nTop - nh);
+  nozzle.lineTo(nw / 3, nTop - nh);
+  nozzle.lineTo(0, nTop - nh - 3 * scale);
+  shapes.push(nozzle);
+
+  // 4. Lettre "3"
+  const s3 = new THREE.Shape();
+  const ox3 = -9.5 * scale;
+  const oy3 = -8 * scale;
+  const sw = 1.4 * scale;
+  s3.moveTo(ox3, oy3 + 12 * scale);
+  s3.lineTo(ox3 + 7 * scale, oy3 + 12 * scale);
+  s3.lineTo(ox3 + 3 * scale, oy3 + 6.5 * scale);
+  s3.quadraticCurveTo(ox3 + 7.5 * scale, oy3 + 6 * scale, ox3 + 7.5 * scale, oy3 + 3 * scale);
+  s3.quadraticCurveTo(ox3 + 7.5 * scale, oy3, ox3 + 3.5 * scale, oy3);
+  s3.quadraticCurveTo(ox3, oy3, ox3, oy3 + 3 * scale);
+  s3.lineTo(ox3 + sw, oy3 + 3 * scale);
+  s3.quadraticCurveTo(ox3 + sw, oy3 + sw, ox3 + 3.5 * scale, oy3 + sw);
+  s3.quadraticCurveTo(ox3 + 5.5 * scale, oy3 + sw, ox3 + 5.5 * scale, oy3 + 3 * scale);
+  s3.quadraticCurveTo(ox3 + 5.5 * scale, oy3 + 5 * scale, ox3 + 2.5 * scale, oy3 + 5.2 * scale);
+  s3.lineTo(ox3 + 0.8 * scale, oy3 + 5.2 * scale);
+  s3.lineTo(ox3 + 4.8 * scale, oy3 + 10.6 * scale);
+  s3.lineTo(ox3, oy3 + 10.6 * scale);
+  shapes.push(s3);
+
+  // 5. Lettre "D"
+  const sD = new THREE.Shape();
+  const oxD = -1 * scale;
+  const oyD = -8 * scale;
+  sD.moveTo(oxD, oyD);
+  sD.lineTo(oxD + 5 * scale, oyD);
+  sD.quadraticCurveTo(oxD + 10.5 * scale, oyD, oxD + 10.5 * scale, oyD + 6.5 * scale);
+  sD.quadraticCurveTo(oxD + 10.5 * scale, oyD + 13 * scale, oxD + 5 * scale, oyD + 13 * scale);
+  sD.lineTo(oxD, oyD + 13 * scale);
+  
+  const holeD = new THREE.Path();
+  holeD.moveTo(oxD + sw, oyD + sw);
+  holeD.lineTo(oxD + 5 * scale, oyD + sw);
+  holeD.quadraticCurveTo(oxD + 8.8 * scale, oyD + sw, oxD + 8.8 * scale, oyD + 6.5 * scale);
+  holeD.quadraticCurveTo(oxD + 8.8 * scale, oyD + 13 * scale - sw, oxD + 5 * scale, oyD + 13 * scale - sw);
+  holeD.lineTo(oxD + sw, oyD + 13 * scale - sw);
+  sD.holes.push(holeD);
+  shapes.push(sD);
+
+  // 6. Lettre "r"
+  const sr = new THREE.Shape();
+  const oxr = 10.5 * scale;
+  const oyr = -8 * scale;
+  sr.moveTo(oxr, oyr);
+  sr.lineTo(oxr + sw, oyr);
+  sr.lineTo(oxr + sw, oyr + 4.5 * scale);
+  sr.quadraticCurveTo(oxr + 2.5 * scale, oyr + 6.5 * scale, oxr + 4.5 * scale, oyr + 6.5 * scale);
+  sr.lineTo(oxr + 4.5 * scale, oyr + 5.2 * scale);
+  sr.quadraticCurveTo(oxr + 1.8 * scale, oyr + 5.2 * scale, oxr + sw, oyr + 3.8 * scale);
+  sr.lineTo(oxr + sw, oyr + 6.5 * scale);
+  sr.lineTo(oxr, oyr + 6.5 * scale);
+  shapes.push(sr);
+
+  return shapes;
+};
+
+// Générateur STL Pro avec gravure du logo 3Dr en creux (0.8 mm) sous la boîte
 const generateBoxSTL = (box) => {
   const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
+  const radius = 8;
+  const segments = 10;
+  const logoDepth = 0.8;
 
-  let stl = `solid drawer_box_${w}x${d}x${h}\n`;
+  const generateRoundedPolygonPoints = (width, depth, rad = 8, segs = 10) => {
+    const r = Math.min(rad, width / 2 - 0.1, depth / 2 - 0.1);
+    const points = [];
+    const addCornerArc = (cx, cy, startAngle, endAngle) => {
+      for (let i = 0; i <= segs; i++) {
+        const angle = startAngle + (endAngle - startAngle) * (i / segs);
+        points.push([cx + r * Math.cos(angle), cy + r * Math.sin(angle)]);
+      }
+    };
+    addCornerArc(width - r, r, -Math.PI / 2, 0);
+    addCornerArc(width - r, depth - r, 0, Math.PI / 2);
+    addCornerArc(r, depth - r, Math.PI / 2, Math.PI);
+    addCornerArc(r, r, Math.PI, (3 * Math.PI) / 2);
+    return points;
+  };
+
+  const outerPoly = generateRoundedPolygonPoints(w, d, radius, segments);
+  const inW = Math.max(2, w - 2 * t);
+  const inD = Math.max(2, d - 2 * t);
+  const inRadius = Math.max(1, radius - t);
+  const rawInnerPoly = generateRoundedPolygonPoints(inW, inD, inRadius, segments);
+  const innerPoly = rawInnerPoly.map(([px, py]) => [px + t, py + t]);
+
+  const N = outerPoly.length;
+  let stl = `solid drawer_box_3dr_${w}x${d}x${h}\n`;
 
   const addFacet = (n, v1, v2, v3) => {
-    stl += `facet normal ${n[0]} ${n[1]} ${n[2]}\n`;
+    stl += `facet normal ${n[0].toFixed(4)} ${n[1].toFixed(4)} ${n[2].toFixed(4)}\n`;
     stl += `  outer loop\n`;
-    stl += `    vertex ${v1[0]} ${v1[1]} ${v1[2]}\n`;
-    stl += `    vertex ${v2[0]} ${v2[1]} ${v2[2]}\n`;
-    stl += `    vertex ${v3[0]} ${v3[1]} ${v3[2]}\n`;
+    stl += `    vertex ${v1[0].toFixed(4)} ${v1[1].toFixed(4)} ${v1[2].toFixed(4)}\n`;
+    stl += `    vertex ${v2[0].toFixed(4)} ${v2[1].toFixed(4)} ${v2[2].toFixed(4)}\n`;
+    stl += `    vertex ${v3[0].toFixed(4)} ${v3[1].toFixed(4)} ${v3[2].toFixed(4)}\n`;
     stl += `  endloop\n`;
     stl += `endfacet\n`;
   };
@@ -64,43 +191,112 @@ const generateBoxSTL = (box) => {
     addFacet(normal, v1, v3, v4);
   };
 
-  // Base rectangulaire simplifiée
-  const p1 = [0, 0, 0], p2 = [w, 0, 0], p3 = [w, d, 0], p4 = [0, d, 0];
-  const p1b = [0, 0, b], p2b = [w, 0, b], p3b = [w, d, b], p4b = [0, d, b];
-  
-  // Fond inférieur
-  addQuad(p1, p4, p3, p2, [0, 0, -1]);
-  // Parois extérieures simples
-  addQuad(p1, p2, p2b, p1b, [0, -1, 0]);
-  addQuad(p2, p3, p3b, p2b, [1, 0, 0]);
-  addQuad(p3, p4, p4b, p3b, [0, 1, 0]);
-  addQuad(p4, p1, p1b, p4b, [-1, 0, 0]);
+  // 1. Fond extérieur (Z = 0)
+  const centerOuter = [w / 2, d / 2, 0];
+  for (let i = 0; i < N; i++) {
+    const next = (i + 1) % N;
+    const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
+    const p2 = [outerPoly[next][0], outerPoly[next][1], 0];
+    addFacet([0, 0, -1], centerOuter, p1, p2);
+  }
 
-  // Intérieur
-  const i1 = [t, t, b], i2 = [w - t, t, b], i3 = [w - t, d - t, b], i4 = [t, d - t, b];
-  const i1h = [t, t, h], i2h = [w - t, t, h], i3h = [w - t, d - t, h], i4h = [t, d - t, h];
+  // 2. Parois extérieures
+  for (let i = 0; i < N; i++) {
+    const next = (i + 1) % N;
+    const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
+    const p2 = [outerPoly[next][0], outerPoly[next][1], 0];
+    const p1h = [outerPoly[i][0], outerPoly[i][1], h];
+    const p2h = [outerPoly[next][0], outerPoly[next][1], h];
 
-  // Fond intérieur
-  addQuad(i1, i2, i3, i4, [0, 0, 1]);
-  // Parois intérieures
-  addQuad(i1, i1h, i2h, i2, [0, 1, 0]);
-  addQuad(i2, i2h, i3h, i3, [-1, 0, 0]);
-  addQuad(i3, i3h, i4h, i4, [0, -1, 0]);
-  addQuad(i4, i4h, i1h, i1, [1, 0, 0]);
+    const dx = outerPoly[next][0] - outerPoly[i][0];
+    const dy = outerPoly[next][1] - outerPoly[i][1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = dy / len;
+    const ny = -dx / len;
 
-  // Bord supérieur
-  const p1h = [0, 0, h], p2h = [w, 0, h], p3h = [w, d, h], p4h = [0, d, h];
-  addQuad(p1h, p1b, i1h, i1h, [0, 0, 1]); // Bordures hautes
-  addQuad(p1h, p2h, i2h, i1h, [0, 0, 1]);
-  addQuad(p2h, p3h, i3h, i2h, [0, 0, 1]);
-  addQuad(p3h, p4h, i4h, i3h, [0, 0, 1]);
-  addQuad(p4h, p1h, i1h, i4h, [0, 0, 1]);
+    addQuad(p1, p2, p2h, p1h, [nx, ny, 0]);
+  }
 
-  stl += `endsolid drawer_box_${w}x${d}x${h}\n`;
+  // 3. Fond intérieur (Z = b)
+  const centerInner = [w / 2, d / 2, b];
+  for (let i = 0; i < N; i++) {
+    const next = (i + 1) % N;
+    const p1 = [innerPoly[i][0], innerPoly[i][1], b];
+    const p2 = [innerPoly[next][0], innerPoly[next][1], b];
+    addFacet([0, 0, 1], centerInner, p2, p1);
+  }
+
+  // 4. Parois intérieures
+  for (let i = 0; i < N; i++) {
+    const next = (i + 1) % N;
+    const p1 = [innerPoly[i][0], innerPoly[i][1], b];
+    const p2 = [innerPoly[next][0], innerPoly[next][1], b];
+    const p1h = [innerPoly[i][0], innerPoly[i][1], h];
+    const p2h = [innerPoly[next][0], innerPoly[next][1], h];
+
+    const dx = innerPoly[next][0] - innerPoly[i][0];
+    const dy = innerPoly[next][1] - innerPoly[i][1];
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+
+    addQuad(p1, p1h, p2h, p2, [nx, ny, 0]);
+  }
+
+  // 5. Bord supérieur (Z = h)
+  for (let i = 0; i < N; i++) {
+    const next = (i + 1) % N;
+    const o1 = [outerPoly[i][0], outerPoly[i][1], h];
+    const o2 = [outerPoly[next][0], outerPoly[next][1], h];
+    const i1 = [innerPoly[i][0], innerPoly[i][1], h];
+    const i2 = [innerPoly[next][0], innerPoly[next][1], h];
+
+    addQuad(o1, o2, i2, i1, [0, 0, 1]);
+  }
+
+  // 6. Gravure du Logo 3Dr en creux (0.8 mm)
+  const scale = Math.min(w, d) < 60 ? 0.7 : 1.0;
+  const logoShapes = createLogoShapes(scale);
+
+  logoShapes.forEach((shape) => {
+    const points = shape.extractPoints(6);
+    const shapeContour = points.shape;
+
+    for (let i = 0; i < shapeContour.length; i++) {
+      const next = (i + 1) % shapeContour.length;
+      const x1 = w / 2 + shapeContour[i].x;
+      const y1 = d / 2 + shapeContour[i].y;
+      const x2 = w / 2 + shapeContour[next].x;
+      const y2 = d / 2 + shapeContour[next].y;
+
+      const v1 = [x1, y1, 0];
+      const v2 = [x2, y2, 0];
+      const v1z = [x1, y1, logoDepth];
+      const v2z = [x2, y2, logoDepth];
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+
+      addQuad(v1, v2, v2z, v1z, [nx, ny, 0]);
+    }
+
+    const centerLogo = [w / 2, d / 2, logoDepth];
+    for (let i = 0; i < shapeContour.length; i++) {
+      const next = (i + 1) % shapeContour.length;
+      const p1 = [w / 2 + shapeContour[i].x, d / 2 + shapeContour[i].y, logoDepth];
+      const p2 = [w / 2 + shapeContour[next].x, d / 2 + shapeContour[next].y, logoDepth];
+      addFacet([0, 0, 1], centerLogo, p1, p2);
+    }
+  });
+
+  stl += `endsolid drawer_box_3dr_${w}x${d}x${h}\n`;
   return stl;
 };
 
-// Helper pour créer une forme 2D arrondie pour Three.js (avec congé de 8mm)
+// Forme 2D arrondie pour Three.js
 const createRoundedBoxShape = (width, depth, radius = 8) => {
   const shape = new THREE.Shape();
   const r = Math.min(radius, width / 2 - 0.1, depth / 2 - 0.1);
@@ -118,9 +314,7 @@ const createRoundedBoxShape = (width, depth, radius = 8) => {
   return shape;
 };
 
-// Application Principale
 export default function App() {
-  // --- ÉTATS PARAMÈTRES DU TIROIR ---
   const [drawerInputs, setDrawerInputs] = useState({
     width: '300',
     depth: '300',
@@ -132,6 +326,9 @@ export default function App() {
     depth: 300,
     height: 60
   });
+
+  const [heightMarginInput, setHeightMarginInput] = useState('2');
+  const [heightMargin, setHeightMargin] = useState(2);
 
   const [gridSize] = useState({ rows: 4, cols: 4 });
 
@@ -148,23 +345,29 @@ export default function App() {
   const [activeColorPickerId, setActiveColorPickerId] = useState(null);
   const [customColors, setCustomColors] = useState({});
 
-  // Paramètres physiques des boîtes (en mm)
+  const [mobileTab, setMobileTab] = useState('2d');
+
   const [boxSettings] = useState({
     wallThickness: 1.2,
     bottomThickness: 1.2,
     clearance: 0.5
   });
 
-  // Paramètres financiers et de calcul
   const [pricingSettings] = useState({
-    plaPricePerKg: 20,       // 20 € / kg
-    kwhPrice: 0.25,          // 0.25 € / kWh
-    printerPowerW: 150,      // 150 Watts
-    laborFeePerBox: 0.10,    // 0.10 € forfait par boîte
-    marginPercent: 300       // Marge de 300%
+    plaPricePerKg: 20,
+    kwhPrice: 0.25,
+    printerPowerW: 150,
+    laborFeePerBox: 0.10,
+    marginPercent: 300
   });
 
-  // Couleurs standards disponibles
+  const [clientInfo, setClientInfo] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    notes: ''
+  });
+
   const standardColors = [
     { name: 'Bleu', hex: '#2563eb' },
     { name: 'Rouge', hex: '#dc2626' },
@@ -176,17 +379,15 @@ export default function App() {
     { name: 'Gris', hex: '#64748b' }
   ];
 
-  // Interactions grille 2D
   const [isMouseDown, setIsMouseDown] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
   const [selectionEnd, setSelectionEnd] = useState(null);
 
-  // État pour la fenêtre modale de partage / commande
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
+  const [orderSent, setOrderSent] = useState(false);
 
-  // Charger la configuration depuis l'URL au démarrage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const configParam = params.get('config');
@@ -195,19 +396,29 @@ export default function App() {
         const decoded = JSON.parse(decodeURIComponent(atob(configParam)));
         if (decoded.drawerInputs) setDrawerInputs(decoded.drawerInputs);
         if (decoded.drawer) setDrawer(decoded.drawer);
+        if (decoded.heightMarginInput !== undefined) {
+          setHeightMarginInput(String(decoded.heightMarginInput));
+          setHeightMargin(parseFloat(decoded.heightMarginInput) || 0);
+        }
         if (decoded.layout) setLayout(decoded.layout);
         if (decoded.customColors) setCustomColors(decoded.customColors);
       } catch (e) {
-        console.error("Erreur lors du chargement de la configuration", e);
+        console.error("Erreur de chargement", e);
       }
     }
   }, []);
 
-  // Générer l'URL de partage
+  const handleHeightMarginChange = (val) => {
+    setHeightMarginInput(val);
+    const num = parseFloat(val);
+    setHeightMargin(!isNaN(num) && num >= 0 ? num : 0);
+  };
+
   const getShareableUrl = () => {
     const config = {
       drawerInputs,
       drawer,
+      heightMarginInput,
       layout,
       customColors
     };
@@ -222,19 +433,26 @@ export default function App() {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  // Récapitulatif texte pour devis/commande
   const getOrderSummaryText = () => {
-    let summary = `=== COMMANDE ORGANISATEUR DE TIROIR ===\n\n`;
-    summary += `Dimensions tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
+    let summary = `=== COMMANDE ORGANISATEUR DE TIROIR (3Dr) ===\n\n`;
+    if (clientInfo.name) summary += `Client : ${clientInfo.name}\n`;
+    if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
+    if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
+    if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
+
+    summary += `--- INFORMATIONS TECHNIQUES ---\n`;
+    summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
+    summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
+    summary += `Gravure du logo 3Dr : Enfoncement 0.8mm sous le fond\n`;
     summary += `Nombre de compartiments : ${boxes.length}\n`;
-    summary += `Prix total estimé : ${totalPrice.toFixed(2)} €\n\n`;
-    summary += `Détail des pièces à fabriquer :\n`;
+    summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
+    summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
     
     boxes.forEach((b, idx) => {
-      summary += `- Compartiment #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm [Couleur: ${b.color}]\n`;
+      summary += `#${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm [Couleur: ${b.color}]\n`;
     });
 
-    summary += `\nLien de la configuration :\n${getShareableUrl()}`;
+    summary += `\nLien interactif :\n${getShareableUrl()}`;
     return summary;
   };
 
@@ -244,14 +462,28 @@ export default function App() {
     setTimeout(() => setCopiedSummary(false), 2000);
   };
 
-  // Références Three.js
+  const sendEmailOrder = () => {
+    const subject = encodeURIComponent(`Nouvelle Commande 3Dr (${totalPrice.toFixed(2)} €)`);
+    const body = encodeURIComponent(getOrderSummaryText());
+    window.open(`mailto:contact@votre-boutique.com?subject=${subject}&body=${body}`);
+    setOrderSent(true);
+  };
+
+  const downloadAllSTLs = () => {
+    boxes.forEach((box, idx) => {
+      setTimeout(() => {
+        downloadBoxSTL(box, `boite_${idx+1}_${box.width}x${box.depth}x${box.height}mm_3dr.stl`);
+      }, idx * 250);
+    });
+  };
+
   const mountRef = useRef(null);
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const controlsRef = useRef(null);
   const boxesGroupRef = useRef(null);
+  const cameraRef = useRef(null);
 
-  // Mise à jour des valeurs du tiroir
   const handleDrawerInputChange = (field, value) => {
     setDrawerInputs(prev => ({ ...prev, [field]: value }));
     const num = parseFloat(value);
@@ -272,67 +504,48 @@ export default function App() {
     setSelectionEnd(null);
   };
 
-  // Calcul du volume, poids, temps d'impression et prix d'une boîte
   const calculateBoxCost = (box) => {
     const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
-    
-    // Volume exact de la matière en cm3
     const outerVolume = (w * d * h) / 1000;
     const innerVolume = Math.max(0, ((w - 2 * t) * (d - 2 * t) * (h - b)) / 1000);
     const materialVolumeCm3 = Math.max(0, outerVolume - innerVolume);
-
-    // Masse en grammes (Densité PLA = 1.24 g/cm3)
     const weightGrams = materialVolumeCm3 * 1.24;
-
-    // Coût matière
     const materialCost = (weightGrams / 1000) * pricingSettings.plaPricePerKg;
-
-    // Temps d'impression estimé (Débit moyen ~18 cm3/h)
     const printTimeHours = materialVolumeCm3 / 18;
-
-    // Coût électricité
     const electricityCost = (pricingSettings.printerPowerW / 1000) * printTimeHours * pricingSettings.kwhPrice;
-
-    // Coût de revient de base
     const baseCost = materialCost + electricityCost + pricingSettings.laborFeePerBox;
-
-    // Prix de vente final recommandé (+ Marge %)
     const finalPrice = baseCost * (1 + pricingSettings.marginPercent / 100);
 
     return {
       weightGrams: Math.round(weightGrams),
       printTimeHours: printTimeHours.toFixed(1),
-      materialCost: materialCost.toFixed(2),
-      electricityCost: electricityCost.toFixed(2),
       finalPrice: Math.max(0.80, finalPrice)
     };
   };
 
-  // Prix total de l'aménagement
   const totalPrice = boxes.reduce((acc, box) => {
     const cost = calculateBoxCost(box);
     return acc + cost.finalPrice;
   }, 0);
 
-  // Télécharger le fichier STL d'une boîte
-  const downloadBoxSTL = (box) => {
+  const downloadBoxSTL = (box, filename) => {
     const stlData = generateBoxSTL(box);
     const blob = new Blob([stlData], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `boite_${box.width}x${box.depth}x${box.height}mm.stl`;
+    link.download = filename || `boite_${box.width}x${box.depth}x${box.height}mm_3dr.stl`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
 
-  // Calcul des boîtes physiques à partir de la grille
   useEffect(() => {
     const unitWidth = drawer.width / gridSize.cols;
     const unitDepth = drawer.depth / gridSize.rows;
     const clearance = boxSettings.clearance;
+    const actualHeight = Math.max(5, drawer.height - heightMargin);
 
     const computedBoxes = layout.map((item) => {
       const rawWidth = item.colSpan * unitWidth;
@@ -340,7 +553,7 @@ export default function App() {
 
       const boxWidth = Math.max(10, Math.round((rawWidth - clearance) * 10) / 10);
       const boxDepth = Math.max(10, Math.round((rawDepth - clearance) * 10) / 10);
-      const boxHeight = Math.max(10, Math.round((drawer.height - 2) * 10) / 10);
+      const boxHeight = Math.max(10, Math.round(actualHeight * 10) / 10);
 
       const posX = item.colStart * unitWidth + clearance / 2;
       const posY = item.rowStart * unitDepth + clearance / 2;
@@ -361,9 +574,8 @@ export default function App() {
     });
 
     setBoxes(computedBoxes);
-  }, [drawer, layout, customColors]);
+  }, [drawer, heightMargin, layout, customColors]);
 
-  // Interaction Grille 2D à la souris
   const handleCellMouseDown = (r, c) => {
     setIsMouseDown(true);
     setSelectionStart({ row: r, col: c });
@@ -398,21 +610,18 @@ export default function App() {
     const bounds = getSelectionBounds();
     if (!bounds) return;
 
-    // Filtrer les boîtes qui chevauchent la zone sélectionnée
     const filteredLayout = layout.filter(box => {
       const boxColEnd = box.colStart + box.colSpan - 1;
       const boxRowEnd = box.rowStart + box.rowSpan - 1;
-
       const selColEnd = bounds.colStart + bounds.colSpan - 1;
       const selRowEnd = bounds.rowStart + bounds.rowSpan - 1;
 
-      const overlap = !(
+      return (
         boxColEnd < bounds.colStart ||
         box.colStart > selColEnd ||
         boxRowEnd < bounds.rowStart ||
         box.rowStart > selRowEnd
       );
-      return !overlap;
     });
 
     const newBox = {
@@ -425,22 +634,24 @@ export default function App() {
     setSelectionEnd(null);
   };
 
-  // Scène Three.js
+  // Initialisation et boucle de rendu Three.js
   useEffect(() => {
     if (!mountRef.current) return;
 
-    const width = mountRef.current.clientWidth;
-    const height = mountRef.current.clientHeight;
+    const width = mountRef.current.clientWidth || 600;
+    const height = mountRef.current.clientHeight || 500;
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#f1f5f9');
     sceneRef.current = scene;
 
-    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 2000);
-    camera.position.set(drawer.width * 0.8, drawer.height * 2.5, drawer.depth * 1.8);
+    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 4000);
+    camera.position.set(drawer.width * 1.3, drawer.height * 2.8, drawer.depth * 2.2);
+    cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     rendererRef.current = renderer;
 
@@ -449,14 +660,14 @@ export default function App() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.target.set(drawer.width / 2, drawer.height / 2, drawer.depth / 2);
     controlsRef.current = controls;
 
-    // Lumières
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(200, 400, 200);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(300, 500, 300);
     dirLight.castShadow = true;
     scene.add(dirLight);
 
@@ -464,7 +675,6 @@ export default function App() {
     scene.add(boxesGroup);
     boxesGroupRef.current = boxesGroup;
 
-    // Animation loop
     let animationFrameId;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
@@ -474,17 +684,21 @@ export default function App() {
     animate();
 
     const handleResize = () => {
-      if (!mountRef.current) return;
+      if (!mountRef.current || !rendererRef.current || !cameraRef.current) return;
       const w = mountRef.current.clientWidth;
       const h = mountRef.current.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
+      if (w > 0 && h > 0) {
+        cameraRef.current.aspect = w / h;
+        cameraRef.current.updateProjectionMatrix();
+        rendererRef.current.setSize(w, h);
+      }
     };
 
     window.addEventListener('resize', handleResize);
+    const timer = setTimeout(handleResize, 100);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
       if (mountRef.current && renderer.domElement) {
@@ -493,7 +707,23 @@ export default function App() {
     };
   }, []);
 
-  // Redessiner le tiroir et les boîtes dans Three.js
+  // Forcer le redimensionnement lors du passage d'onglet
+  useEffect(() => {
+    if (mountRef.current && rendererRef.current && cameraRef.current) {
+      const timer = setTimeout(() => {
+        const w = mountRef.current.clientWidth;
+        const h = mountRef.current.clientHeight;
+        if (w > 0 && h > 0) {
+          cameraRef.current.aspect = w / h;
+          cameraRef.current.updateProjectionMatrix();
+          rendererRef.current.setSize(w, h);
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [mobileTab]);
+
+  // Redessiner les objets 3D à chaque modification des boîtes
   useEffect(() => {
     if (!sceneRef.current || !boxesGroupRef.current) return;
 
@@ -502,36 +732,30 @@ export default function App() {
       group.remove(group.children[0]);
     }
 
-    // Tiroir translucide (Repère)
     const drawerGeo = new THREE.BoxGeometry(drawer.width, drawer.height, drawer.depth);
     const drawerMat = new THREE.MeshStandardMaterial({
       color: 0x94a3b8,
       transparent: true,
-      opacity: 0.15,
-      wireframe: false
+      opacity: 0.15
     });
     const drawerMesh = new THREE.Mesh(drawerGeo, drawerMat);
     drawerMesh.position.set(drawer.width / 2, drawer.height / 2, drawer.depth / 2);
     group.add(drawerMesh);
 
-    // Contour du tiroir
     const edges = new THREE.EdgesGeometry(drawerGeo);
     const lineMat = new THREE.LineBasicMaterial({ color: 0x64748b, linewidth: 2 });
     const wireframe = new THREE.LineSegments(edges, lineMat);
     wireframe.position.copy(drawerMesh.position);
     group.add(wireframe);
 
-    // Ajouter chaque boîte (Modélisation réaliste creuse avec congés)
     boxes.forEach((b) => {
       const isSelected = b.id === selectedBoxId;
       const wallT = b.wallThickness;
       const bottomT = b.bottomThickness;
-      const cornerRadius = 8; // Congé extérieur de 8mm
+      const cornerRadius = 8;
 
-      // Forme extérieure arrondie
       const outerShape = createRoundedBoxShape(b.width, b.depth, cornerRadius);
 
-      // Trou intérieur (parois)
       if (b.width > wallT * 2 && b.depth > wallT * 2) {
         const innerShapePath = new THREE.Path();
         const inW = b.width - wallT * 2;
@@ -551,7 +775,6 @@ export default function App() {
         outerShape.holes.push(innerShapePath);
       }
 
-      // Parois extruded
       const extrudeSettings = {
         depth: b.height - bottomT,
         bevelEnabled: false
@@ -559,7 +782,6 @@ export default function App() {
       const wallsGeo = new THREE.ExtrudeGeometry(outerShape, extrudeSettings);
       wallsGeo.rotateX(-Math.PI / 2);
 
-      // Fond de la boîte
       const bottomShape = createRoundedBoxShape(b.width, b.depth, cornerRadius);
       const bottomGeo = new THREE.ExtrudeGeometry(bottomShape, {
         depth: bottomT,
@@ -584,6 +806,26 @@ export default function App() {
 
       boxGroup.add(wallsMesh);
       boxGroup.add(bottomMesh);
+
+      const scale = Math.min(b.width, b.depth) < 60 ? 0.7 : 1.0;
+      const logoShapes = createLogoShapes(scale);
+      const logoMat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(b.color).clone().multiplyScalar(0.75),
+        roughness: 0.5,
+        side: THREE.DoubleSide
+      });
+
+      logoShapes.forEach(shape => {
+        const logoGeo = new THREE.ExtrudeGeometry(shape, {
+          depth: 0.8,
+          bevelEnabled: false
+        });
+        logoGeo.rotateX(-Math.PI / 2);
+        const logoMesh = new THREE.Mesh(logoGeo, logoMat);
+        logoMesh.position.set(b.width / 2, 0, b.depth / 2);
+        boxGroup.add(logoMesh);
+      });
+
       boxGroup.position.set(b.x, 0, b.y);
 
       if (isSelected) {
@@ -607,57 +849,75 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
-      {/* HEADER PRINCIPAL */}
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between z-10 shadow-xs">
-        <div className="flex items-center space-x-3">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
             <Box className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-base font-bold text-slate-900 leading-tight">Organisateur de Tiroir Sur-Mesure</h1>
-            <p className="text-xs text-slate-500">Conception 2D/3D & Export STL pour impression 3D</p>
+            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">Organisateur Tiroir 3Dr</h1>
+            <p className="hidden sm:block text-xs text-slate-500">Sur-Mesure & Impression 3D</p>
           </div>
         </div>
 
-        {/* PRIX TOTAL ESTIMÉ & BOUTONS D'ACTION */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <button
             onClick={copyShareLink}
-            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-slate-200 cursor-pointer"
-            title="Copier le lien de cette configuration"
+            className="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1 border border-slate-200 cursor-pointer"
+            title="Copier le lien"
           >
             {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5 text-slate-600" />}
-            <span>{copiedLink ? 'Lien copié !' : 'Partager'}</span>
+            <span className="hidden sm:inline">{copiedLink ? 'Lien copié !' : 'Partager'}</span>
           </button>
 
           <button
             onClick={() => setShowShareModal(true)}
-            className="px-3 text-xs py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer"
+            className="px-3 py-1.5 sm:py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>Commander / Devis</span>
+            <span>Commander</span>
           </button>
 
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-1.5 flex items-center gap-2.5">
-            <div className="p-1.5 bg-emerald-500 rounded-lg text-white">
-              <Euro className="w-4 h-4" />
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-3 sm:px-4 py-1 flex items-center gap-2">
+            <div className="p-1 bg-emerald-500 rounded-lg text-white">
+              <Euro className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider block">Prix Total Estimé</span>
-              <span className="text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
+              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block">Prix Total</span>
+              <span className="text-xs sm:text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* MODALE DE PARTAGE / COMMANDE */}
+      <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0">
+        <button
+          onClick={() => setMobileTab('2d')}
+          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 ${mobileTab === '2d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+        >
+          <Grid className="w-3.5 h-3.5" /> Plan 2D
+        </button>
+        <button
+          onClick={() => setMobileTab('3d')}
+          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 ${mobileTab === '3d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+        >
+          <Eye className="w-3.5 h-3.5" /> Vue 3D
+        </button>
+        <button
+          onClick={() => setMobileTab('list')}
+          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 ${mobileTab === 'list' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+        >
+          <Layers className="w-3.5 h-3.5" /> Boîtes ({boxes.length})
+        </button>
+      </div>
+
       {showShareModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-150">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-2">
-                <Send className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-800">Partager ou Commander cette composition</h3>
+                <ShoppingBag className="w-4 h-4 text-indigo-600" />
+                <h3 className="text-sm font-bold text-slate-800">Passer Commande / Exporter</h3>
               </div>
               <button 
                 onClick={() => setShowShareModal(false)}
@@ -667,62 +927,107 @@ export default function App() {
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
-              {/* LIEN UNIQUE DE LA CONFIGURATION */}
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Vos Coordonnées (pour la livraison)
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nom complet *"
+                    value={clientInfo.name}
+                    onChange={(e) => setClientInfo({ ...clientInfo, name: e.target.value })}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Adresse Email *"
+                    value={clientInfo.email}
+                    onChange={(e) => setClientInfo({ ...clientInfo, email: e.target.value })}
+                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <input
+                  type="tel"
+                  placeholder="Téléphone (optionnel)"
+                  value={clientInfo.phone}
+                  onChange={(e) => setClientInfo({ ...clientInfo, phone: e.target.value })}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={sendEmailOrder}
+                  className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  Envoyer la commande par Email
+                </button>
+                <button
+                  onClick={copyOrderSummary}
+                  className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-bold transition flex items-center justify-center gap-2 border border-slate-200 cursor-pointer"
+                >
+                  {copiedSummary ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  {copiedSummary ? 'Copié !' : 'Copier Récapitulatif'}
+                </button>
+              </div>
+
+              {orderSent && (
+                <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-center font-bold flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Commande initiée ! Merci.
+                </div>
+              )}
+
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Lien direct de la configuration</label>
+                <label className="font-bold text-slate-700 block mb-1">Lien direct de la configuration</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     readOnly
                     value={getShareableUrl()}
-                    className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-600 select-all focus:outline-none"
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-mono text-slate-600 select-all"
                   />
                   <button
                     onClick={copyShareLink}
-                    className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0"
+                    className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-bold transition"
                   >
-                    {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copiedLink ? 'Copié' : 'Copier'}
                   </button>
                 </div>
               </div>
 
-              {/* RÉCAPITULATIF POUR DEVIS */}
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Récapitulatif de la commande</label>
-                <textarea
-                  readOnly
-                  rows={7}
-                  value={getOrderSummaryText()}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-700 focus:outline-none resize-none"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={copyOrderSummary}
-                  className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-md shadow-emerald-200"
-                >
-                  {copiedSummary ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  {copiedSummary ? 'Récapitulatif copié !' : 'Copier le récapitulatif'}
-                </button>
+              <div className="pt-3 border-t border-slate-200">
+                <div className="flex items-center justify-between bg-slate-100 p-3 rounded-xl border border-slate-200">
+                  <div>
+                    <h5 className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <PackageCheck className="w-4 h-4 text-emerald-600" /> Espace Impression (Vendeur 3Dr)
+                    </h5>
+                    <p className="text-[10px] text-slate-500">Télécharger les {boxes.length} fichiers STL avec gravure 0.8mm sous le fond.</p>
+                  </div>
+                  <button
+                    onClick={downloadAllSTLs}
+                    className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer shrink-0"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>TOUS LES STL</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* CONTENU PRINCIPAL */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* PANNEAU GAUCHE: CONTROLES & SELECTION */}
-        <div className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto">
-          {/* SECTION TIROIR DIMENSIONS */}
+      <div className="flex-1 flex overflow-hidden relative">
+        <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-slate-100 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
               Dimensions du Tiroir (mm)
             </h2>
+            
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Largeur</label>
@@ -752,10 +1057,58 @@ export default function App() {
                 />
               </div>
             </div>
+
+            <div className="pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
+                    <ArrowDown className="w-3 h-3 text-indigo-600" /> Jeu de Hauteur (mm)
+                  </label>
+                  <p className="text-[9px] text-slate-400">
+                    Hauteur utile : <strong className="text-slate-600">{Math.max(5, drawer.height - heightMargin)} mm</strong>
+                  </p>
+                </div>
+                <div className="relative w-24">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={heightMarginInput}
+                    onChange={(e) => handleHeightMarginChange(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
+                  />
+                  <span className="absolute right-2 top-1.5 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-400" /> Parois (mm)
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={boxSettings.wallThickness}
+                  className="w-full px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-400 cursor-not-allowed select-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-400" /> Fond (mm)
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={boxSettings.bottomThickness}
+                  className="w-full px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-400 cursor-not-allowed select-none"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* SEC 3: EDITEUR 2D 4X4 */}
-          <div className="p-4 border-b border-slate-100">
+          <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Grid className="w-3.5 h-3.5 text-indigo-600" />
@@ -765,7 +1118,7 @@ export default function App() {
                 <button
                   onClick={clearLayout}
                   className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
-                  title="Vider entièrement le tiroir"
+                  title="Vider le tiroir"
                 >
                   <Trash2 className="w-3 h-3" />
                   Vider
@@ -773,21 +1126,14 @@ export default function App() {
                 <button
                   onClick={resetLayoutToDefault}
                   className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
-                  title="Réinitialiser en 4 compartiments"
+                  title="Réinitialiser"
                 >
                   <RotateCcw className="w-3 h-3" />
                 </button>
               </div>
             </div>
 
-            <p className="text-[11px] text-slate-500 mb-3">
-              Cliquez et glissez sur la grille pour sélectionner une zone, puis fusionnez-la.
-            </p>
-
-            {/* GRILLE 2D INTERACTIVE (4x4) */}
             <div className="relative w-full aspect-square border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none">
-              
-              {/* COUCHE DES BOÎTES EXISTANTES */}
               <div className="absolute inset-0 z-0">
                 {layout.map((b) => {
                   const leftPercent = (b.colStart / gridSize.cols) * 100;
@@ -816,14 +1162,12 @@ export default function App() {
                 })}
               </div>
 
-              {/* OVERLAY POINTILLÉS DE LA GRILLE 4x4 (Toujours visible au-dessus) */}
               <div className="absolute inset-0 z-10 pointer-events-none grid grid-cols-4 grid-rows-4">
                 {Array.from({ length: 16 }).map((_, idx) => (
                   <div key={idx} className="border border-dashed border-slate-900/25" />
                 ))}
               </div>
 
-              {/* ZONE DE SÉLECTION EN COURS (BLEU DE SÉLECTION) */}
               {selectionBounds && (
                 <div
                   className="absolute z-20 border-2 border-indigo-600 bg-indigo-500/30 rounded-lg pointer-events-none transition-all"
@@ -836,7 +1180,6 @@ export default function App() {
                 />
               )}
 
-              {/* GRILLE CIBLE DES ÉVÉNEMENTS SOURIS (PREMIER PLAN INTERACTIF) */}
               <div className="absolute inset-0 z-30 grid grid-cols-4 grid-rows-4 cursor-pointer">
                 {Array.from({ length: gridSize.rows }).map((_, r) =>
                   Array.from({ length: gridSize.cols }).map((_, c) => (
@@ -851,7 +1194,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* BOUTON CONTEXTUEL DE FUSION */}
             {selectionBounds && (
               <button
                 onClick={mergeSelectedArea}
@@ -863,8 +1205,7 @@ export default function App() {
             )}
           </div>
 
-          {/* SEC 4: LISTE ET EXPORT INDIVIDUEL */}
-          <div className="p-4 flex-1">
+          <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
@@ -887,7 +1228,6 @@ export default function App() {
                       }`}
                     >
                       <div className="flex items-center space-x-2.5">
-                        {/* Cercle de couleur cliquable */}
                         <div className="relative">
                           <button
                             type="button"
@@ -895,9 +1235,9 @@ export default function App() {
                               e.stopPropagation();
                               setActiveColorPickerId(isPickerOpen ? null : box.id);
                             }}
-                            className="w-4 h-4 rounded-full flex-shrink-0 border border-black/20 hover:scale-125 transition-transform shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                            className="w-4 h-4 rounded-full flex-shrink-0 border border-black/20 hover:scale-125 transition-transform shadow-sm cursor-pointer"
                             style={{ backgroundColor: box.color }}
-                            title="Cliquer pour changer la couleur"
+                            title="Changer la couleur"
                           />
                         </div>
 
@@ -915,13 +1255,12 @@ export default function App() {
                           downloadBoxSTL(box);
                         }}
                         className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-lg border border-slate-200 transition"
-                        title="Télécharger ce fichier STL"
+                        title="Télécharger STL (avec logo 3Dr)"
                       >
                         <Download className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    {/* Popover de sélection de couleur */}
                     {isPickerOpen && (
                       <div 
                         className="absolute left-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-xl p-2.5 shadow-xl grid grid-cols-4 gap-2 w-48"
@@ -953,13 +1292,13 @@ export default function App() {
           </div>
         </div>
 
-        {/* PANNEAU DROIT: RENDU 3D THREE.JS */}
-        <div className="flex-1 relative bg-slate-100">
-          <div ref={mountRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+        {/* CONTENEUR 3D STABLE */}
+        <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[400px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
+          <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
-          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-3 rounded-xl text-[11px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none">
+          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-3 rounded-xl text-[11px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none z-10">
             <Eye className="w-4 h-4 text-indigo-600" />
-            <span>Glisser pour faire tourner la vue 3D • Molette pour zoomer</span>
+            <span>Glisser pour faire tourner la vue 3D (logo 3Dr gravé dessous)</span>
           </div>
         </div>
       </div>
