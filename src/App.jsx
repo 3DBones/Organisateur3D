@@ -21,7 +21,8 @@ import {
   Smartphone,
   CheckCircle,
   MousePointerClick,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 
 const getDimensionColor = (colSpan, rowSpan) => {
@@ -49,7 +50,6 @@ const create3DrTextShapes = (scale = 1) => {
   const shapes = [];
   const sw = 3.2 * scale;
 
-  // Letter "3"
   const s3 = new THREE.Shape();
   const ox3 = -14 * scale;
   const oy3 = -7 * scale;
@@ -69,7 +69,6 @@ const create3DrTextShapes = (scale = 1) => {
   s3.lineTo(ox3, oy3 + 8 * scale - sw);
   shapes.push(s3);
 
-  // Letter "D"
   const sD = new THREE.Shape();
   const oxD = -2 * scale;
   const oyD = -8 * scale;
@@ -89,7 +88,6 @@ const create3DrTextShapes = (scale = 1) => {
   sD.holes.push(holeD);
   shapes.push(sD);
 
-  // Letter "r"
   const sr = new THREE.Shape();
   const oxr = 13.5 * scale;
   const oyr = -8 * scale;
@@ -347,6 +345,7 @@ export default function App() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [orderSent, setOrderSent] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const handleHeightMarginChange = (val) => {
     setHeightMarginInput(val);
@@ -415,11 +414,24 @@ export default function App() {
     setTimeout(() => setCopiedSummary(false), 2000);
   };
 
-  const sendEmailOrder = () => {
-    const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (Estimation ${totalPrice.toFixed(2)} €)`);
-    const body = encodeURIComponent(getOrderSummaryText());
-    window.open(`mailto:3dr.global@gmail.com?subject=${subject}&body=${body}`);
-    setOrderSent(true);
+  const sendEmailOrder = async () => {
+    if (!clientInfo.name || !clientInfo.email || !clientInfo.postalCode || !clientInfo.city || !clientInfo.address) {
+      alert("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse/Point Relay).");
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (Estimation ${totalPrice.toFixed(2)} €)`);
+      const body = encodeURIComponent(getOrderSummaryText());
+      window.open(`mailto:3dr.global@gmail.com?subject=${subject}&body=${body}`);
+      setOrderSent(true);
+      setIsSending(false);
+    } catch (error) {
+      console.error("Erreur d'envoi", error);
+      setIsSending(false);
+    }
   };
 
   const mountRef = useRef(null);
@@ -910,7 +922,6 @@ export default function App() {
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                 />
 
-                {/* MODAL SHIPPING DETAILED BREAKDOWN */}
                 <div className="p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 mt-2">
                   <div className="flex justify-between items-center text-slate-700 font-semibold">
                     <span>Sous-total boîtes :</span>
@@ -933,10 +944,11 @@ export default function App() {
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={sendEmailOrder}
+                  disabled={isSending}
                   className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200 cursor-pointer min-h-[44px]"
                 >
-                  <Send className="w-4 h-4" />
-                  Envoyer la demande de devis
+                  {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  {isSending ? 'Envoi en cours...' : 'Envoyer la demande de devis'}
                 </button>
                 <button
                   onClick={copyOrderSummary}
@@ -949,7 +961,7 @@ export default function App() {
 
               {orderSent && (
                 <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-center font-bold flex items-center justify-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Commande initiée ! Merci.
+                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Commande prête et envoyée vers 3dr.global@gmail.com !
                 </div>
               )}
             </div>
@@ -959,9 +971,7 @@ export default function App() {
 
       {/* MAIN VIEW CONTENT AREA */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* SIDEBAR & CONTROL PANEL */}
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
-          {/* DRAWER DIMENSIONS */}
           <div className="p-4 border-b border-slate-100 space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
               <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
@@ -1048,7 +1058,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* 2D INTERACTIVE GRID PLANNER */}
           <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1157,7 +1166,6 @@ export default function App() {
             )}
           </div>
 
-          {/* BOXES LIST & COLOR SELECTOR */}
           <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
@@ -1166,7 +1174,6 @@ export default function App() {
               </h2>
             </div>
 
-            {/* COLOR SELECTION HINT */}
             <p className="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-100 p-2 rounded-lg mb-2 flex items-center gap-1.5 font-medium">
               <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
               <span>Vous pouvez sélectionner la couleur en cliquant sur le rond de couleur.</span>
@@ -1240,7 +1247,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* 3D CANVAS VIEW AREA */}
         <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[350px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
