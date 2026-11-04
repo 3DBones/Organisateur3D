@@ -403,7 +403,6 @@ export default function App() {
     
     boxes.forEach((b, idx) => {
       summary += `\n[COMPARTIMENT #${idx + 1} : ${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}]\n`;
-      // Inclusion sécurisée du code STL textuel directement dans l'e-mail reçu par le vendeur
       summary += generateBoxSTL(b) + `\n----------------------------------------\n`;
     });
 
