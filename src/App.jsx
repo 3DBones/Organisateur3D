@@ -22,7 +22,8 @@ import {
   CheckCircle,
   MousePointerClick,
   Info,
-  Loader2
+  Loader2,
+  Sliders
 } from 'lucide-react';
 
 const getDimensionColor = (colSpan, rowSpan) => {
@@ -284,6 +285,9 @@ export default function App() {
   const [heightMarginInput, setHeightMarginInput] = useState('2');
   const [heightMargin, setHeightMargin] = useState(2);
 
+  const [clearanceInput, setClearanceInput] = useState('1');
+  const [clearance, setClearance] = useState(1);
+
   const [gridSize] = useState({ rows: 4, cols: 4 });
 
   const defaultLayout = [
@@ -303,8 +307,7 @@ export default function App() {
 
   const [boxSettings] = useState({
     wallThickness: 1.2,
-    bottomThickness: 1.2,
-    clearance: 0.5
+    bottomThickness: 1.2
   });
 
   const [pricingSettings] = useState({
@@ -353,6 +356,12 @@ export default function App() {
     setHeightMargin(!isNaN(num) && num >= 0 ? num : 0);
   };
 
+  const handleClearanceChange = (val) => {
+    setClearanceInput(val);
+    const num = parseFloat(val);
+    setClearance(!isNaN(num) && num >= 0 ? num : 0);
+  };
+
   const calculateBoxCost = (box) => {
     const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
     const outerVolume = (w * d * h) / 1000;
@@ -392,6 +401,7 @@ export default function App() {
 
     summary += `--- INFORMATIONS TECHNIQUES & TARIFS ESTIMÉS ---\n`;
     summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
+    summary += `Jeu entre boîtes : ${clearance} mm\n`;
     summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
     summary += `Gravure du texte "3Dr" : Enfoncement 0.8mm sous le fond\n`;
     summary += `Nombre de compartiments : ${boxes.length}\n`;
@@ -422,14 +432,68 @@ export default function App() {
 
     setIsSending(true);
 
+    // 1. Génération du contenu STL combiné de toutes les boîtes
+    let combinedSTL = '';
+    boxes.forEach((b, idx) => {
+      combinedSTL += `\n/* COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}) */\n`;
+      combinedSTL += generateBoxSTL(b) + '\n';
+    });
+
+    // 2. Préparation des variables pour l'API REST EmailJS
+    const templateParams = {
+      to_email: '3dr.global@gmail.com',
+      client_name: clientInfo.name,
+      client_email: clientInfo.email,
+      client_phone: clientInfo.phone || 'Non renseigné',
+      client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (Belgique)`,
+      client_notes: clientInfo.notes || 'Aucune note',
+      drawer_dimensions: `${drawer.width} x ${drawer.depth} x ${drawer.height} mm`,
+      box_count: boxes.length,
+      clearance: clearance,
+      height_margin: heightMargin,
+      total_price: totalPrice.toFixed(2),
+      order_summary: getOrderSummaryText(),
+      stl_content: combinedSTL
+    };
+
+    // Identifiants EmailJS
+    const SERVICE_ID = 'service_fyg2wy1';
+    const PUBLIC_KEY = 'ccGFwjgEOJLKeTkpU';
+    const TEMPLATE_DEVIS_ID = 'template_5ynz5gn';
+    const TEMPLATE_STL_ID = 'template_d48cfes';
+
     try {
-      const subject = encodeURIComponent(`Demande Devis 3Dr Belgique (Estimation ${totalPrice.toFixed(2)} €)`);
-      const body = encodeURIComponent(getOrderSummaryText());
-      window.open(`mailto:3dr.global@gmail.com?subject=${subject}&body=${body}`);
+      if (SERVICE_ID !== 'YOUR_SERVICE_ID' && PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
+        // Fonction générique d'envoi via l'API REST EmailJS (sans dépendance NPM)
+        const sendEmailRequest = async (templateId) => {
+          return fetch('https://api.emailjs.com/api/v1.0/email/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              service_id: SERVICE_ID,
+              template_id: templateId,
+              user_id: PUBLIC_KEY,
+              template_params: templateParams
+            })
+          });
+        };
+
+        // Envoi Email 1 : Devis & Coordonnées Client
+        await sendEmailRequest(TEMPLATE_DEVIS_ID);
+
+        // Envoi Email 2 : Fichiers STL combinés
+        await sendEmailRequest(TEMPLATE_STL_ID);
+      } else {
+        // Simulation locale si les clés ne sont pas encore configurées
+        console.log("EmailJS Params (Simulation REST API) :", templateParams);
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+
       setOrderSent(true);
       setIsSending(false);
     } catch (error) {
-      console.error("Erreur d'envoi", error);
+      console.error("Erreur d'envoi EmailJS :", error);
+      alert("Une erreur est survenue lors de l'envoi de la commande.");
       setIsSending(false);
     }
   };
@@ -464,7 +528,6 @@ export default function App() {
   useEffect(() => {
     const unitWidth = drawer.width / gridSize.cols;
     const unitDepth = drawer.depth / gridSize.rows;
-    const clearance = boxSettings.clearance;
     const actualHeight = Math.max(5, drawer.height - heightMargin);
 
     const computedBoxes = layout.map((item) => {
@@ -494,7 +557,7 @@ export default function App() {
     });
 
     setBoxes(computedBoxes);
-  }, [drawer, heightMargin, layout, customColors]);
+  }, [drawer, heightMargin, clearance, layout, customColors]);
 
   const getCellFromCoords = (clientX, clientY) => {
     if (!gridContainerRef.current) return null;
@@ -1008,7 +1071,31 @@ export default function App() {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100">
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              {/* CHAMP JEU ENTRE BOÎTES */}
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
+                    <Sliders className="w-3 h-3 text-indigo-600" /> Jeu entre Boîtes (mm)
+                  </label>
+                  <p className="text-[9px] text-slate-400">
+                    Espace d'insertion latéral
+                  </p>
+                </div>
+                <div className="relative w-24">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={clearanceInput}
+                    onChange={(e) => handleClearanceChange(e.target.value)}
+                    className="w-full px-2.5 py-2 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
+                  />
+                  <span className="absolute right-2 top-2 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
+                </div>
+              </div>
+
+              {/* CHAMP JEU DE HAUTEUR */}
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
