@@ -418,6 +418,34 @@ export default function App() {
     return summary;
   };
 
+  const getOrderSummaryCleanText = () => {
+    let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
+    summary += `--- COORDONNÉES CLIENT (BELGIQUE) ---\n`;
+    if (clientInfo.name) summary += `Nom : ${clientInfo.name}\n`;
+    if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
+    if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
+    if (clientInfo.address) summary += `Adresse / Point Relay : ${clientInfo.address}\n`;
+    if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
+    if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
+
+    summary += `--- INFORMATIONS TECHNIQUES & TARIFS ESTIMÉS ---\n`;
+    summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
+    summary += `Jeu entre boîtes : ${clearance} mm\n`;
+    summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
+    summary += `Gravure du texte "3Dr" : Enfoncement 0.8mm sous le fond\n`;
+    summary += `Nombre de compartiments : ${boxes.length}\n`;
+    summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
+    summary += `Livraison Mondial Relay (Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
+    summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
+    summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
+    
+    boxes.forEach((b, idx) => {
+      summary += `COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm - Couleur: ${b.color}\n`;
+    });
+
+    return summary;
+  };
+
   const copyOrderSummary = () => {
     navigator.clipboard.writeText(getOrderSummaryText());
     setCopiedSummary(true);
@@ -432,12 +460,15 @@ export default function App() {
 
     setIsSending(true);
 
-    // 1. Synthèse des dimensions des boîtes pour l'e-mail (évite l'erreur HTTP 413 Payload Too Large)
+    // Synthèse concise des dimensions des boîtes pour l'e-mail (gros fichier STL exclu)
     const boxesSummaryText = boxes.map((b, idx) => 
       `Compartiment #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm - Couleur: ${b.color}`
     ).join('\n');
 
-    // 2. Préparation des variables pour l'API REST EmailJS
+    // Récapitulatif clean sans données volumineuses
+    const cleanSummary = getOrderSummaryCleanText();
+
+    // Préparation des variables légères pour l'API REST EmailJS (Taille totale ~ 2 Kb << 50 Kb limit)
     const templateParams = {
       to_email: '3dr.global@gmail.com',
       client_name: clientInfo.name,
@@ -450,11 +481,11 @@ export default function App() {
       clearance: clearance,
       height_margin: heightMargin,
       total_price: totalPrice.toFixed(2),
-      order_summary: getOrderSummaryText(),
+      order_summary: cleanSummary,
       stl_content: boxesSummaryText
     };
 
-    // Tes Identifiants EmailJS conservés
+    // Vos identifiants EmailJS
     const SERVICE_ID = 'service_fyg2wy1';
     const PUBLIC_KEY = 'ccGFwjgEOJLKeTkpU';
     const TEMPLATE_DEVIS_ID = 'template_5ynz5gn';
@@ -482,7 +513,7 @@ export default function App() {
           throw new Error(`EmailJS (Devis): ${resDevis.status} ${errText}`);
         }
 
-        // Envoi Email 2 : Récapitulatif
+        // Envoi Email 2 : Récapitulatif technique
         if (TEMPLATE_STL_ID) {
           await sendEmailRequest(TEMPLATE_STL_ID);
         }
