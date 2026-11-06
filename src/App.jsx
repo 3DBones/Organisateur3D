@@ -270,38 +270,129 @@ const createRoundedBoxShape = (width, depth, radius = 8) => {
 };
 
 export default function App() {
-  const [drawerInputs, setDrawerInputs] = useState({
-    width: '300',
-    depth: '300',
-    height: '60'
-  });
-
-  const [drawer, setDrawer] = useState({
-    width: 300,
-    depth: 300,
-    height: 60
-  });
-
-  const [heightMarginInput, setHeightMarginInput] = useState('2');
-  const [heightMargin, setHeightMargin] = useState(2);
-
-  const [clearanceInput, setClearanceInput] = useState('1');
-  const [clearance, setClearance] = useState(1);
-
-  const [gridSize] = useState({ rows: 4, cols: 4 });
-
   const defaultLayout = [
-    { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 2 },
-    { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 },
-    { id: '3', colStart: 0, rowStart: 2, colSpan: 2, rowSpan: 2 },
-    { id: '4', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }
+    { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 4 }, // 2x4
+    { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 }, // 2x2
+    { id: '3', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }  // 2x2
   ];
 
-  const [layout, setLayout] = useState(defaultLayout);
+  // Gestion multi-tiroirs
+  const [drawersList, setDrawersList] = useState([
+    {
+      id: 'drawer-1',
+      name: 'Tiroir 1',
+      dimensions: { width: 294, depth: 180, height: 33 },
+      dimensionInputs: { width: '294', depth: '180', height: '33' },
+      heightMargin: 2,
+      heightMarginInput: '2',
+      clearance: 1,
+      clearanceInput: '1',
+      layout: defaultLayout,
+      customColors: {}
+    }
+  ]);
+  const [activeDrawerId, setActiveDrawerId] = useState('drawer-1');
+
+  // Tiroir actif
+  const activeDrawer = drawersList.find(d => d.id === activeDrawerId) || drawersList[0];
+
+  const drawerInputs = activeDrawer.dimensionInputs;
+  const drawer = activeDrawer.dimensions;
+  const heightMarginInput = activeDrawer.heightMarginInput;
+  const heightMargin = activeDrawer.heightMargin;
+  const clearanceInput = activeDrawer.clearanceInput;
+  const clearance = activeDrawer.clearance;
+  const layout = activeDrawer.layout;
+  const customColors = activeDrawer.customColors;
+
+  // Fonctions de mise à jour pour le tiroir actif
+  const updateActiveDrawer = (updater) => {
+    setDrawersList(prev => prev.map(d => d.id === activeDrawerId ? updater(d) : d));
+  };
+
+  const setDrawerInputs = (valOrFn) => {
+    updateActiveDrawer(d => {
+      const nextInputs = typeof valOrFn === 'function' ? valOrFn(d.dimensionInputs) : valOrFn;
+      return { ...d, dimensionInputs: nextInputs };
+    });
+  };
+
+  const setDrawer = (valOrFn) => {
+    updateActiveDrawer(d => {
+      const nextDims = typeof valOrFn === 'function' ? valOrFn(d.dimensions) : valOrFn;
+      return { ...d, dimensions: nextDims };
+    });
+  };
+
+  const setHeightMarginInput = (val) => {
+    updateActiveDrawer(d => ({ ...d, heightMarginInput: val }));
+  };
+
+  const setHeightMargin = (val) => {
+    updateActiveDrawer(d => ({ ...d, heightMargin: val }));
+  };
+
+  const setClearanceInput = (val) => {
+    updateActiveDrawer(d => ({ ...d, clearanceInput: val }));
+  };
+
+  const setClearance = (val) => {
+    updateActiveDrawer(d => ({ ...d, clearance: val }));
+  };
+
+  const setLayout = (valOrFn) => {
+    updateActiveDrawer(d => {
+      const nextLayout = typeof valOrFn === 'function' ? valOrFn(d.layout) : valOrFn;
+      return { ...d, layout: nextLayout };
+    });
+  };
+
+  const setCustomColors = (valOrFn) => {
+    updateActiveDrawer(d => {
+      const nextColors = typeof valOrFn === 'function' ? valOrFn(d.customColors) : valOrFn;
+      return { ...d, customColors: nextColors };
+    });
+  };
+
+  const addNewDrawer = () => {
+    const newId = `drawer-${Date.now()}`;
+    const newDrawerNum = drawersList.length + 1;
+    const newDrawerItem = {
+      id: newId,
+      name: `Tiroir ${newDrawerNum}`,
+      dimensions: { width: 300, depth: 300, height: 60 },
+      dimensionInputs: { width: '300', depth: '300', height: '60' },
+      heightMargin: 2,
+      heightMarginInput: '2',
+      clearance: 1,
+      clearanceInput: '1',
+      layout: [
+        { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 2 },
+        { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 }
+      ],
+      customColors: {}
+    };
+    setDrawersList(prev => [...prev, newDrawerItem]);
+    setActiveDrawerId(newId);
+  };
+
+  const removeDrawer = (id, e) => {
+    e.stopPropagation();
+    if (drawersList.length <= 1) {
+      alert("Vous devez conserver au moins un tiroir.");
+      return;
+    }
+    const filtered = drawersList.filter(d => d.id !== id);
+    setDrawersList(filtered);
+    if (activeDrawerId === id) {
+      setActiveDrawerId(filtered[0].id);
+    }
+  };
+
+  const [gridSize] = useState({ rows: 4, cols: 4 });
   const [boxes, setBoxes] = useState([]);
   const [selectedBoxId, setSelectedBoxId] = useState(null);
   const [activeColorPickerId, setActiveColorPickerId] = useState(null);
-  const [customColors, setCustomColors] = useState({});
 
   const [mobileTab, setMobileTab] = useState('2d');
 
@@ -366,65 +457,81 @@ export default function App() {
 
   const calculateBoxCost = (box) => {
     const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
-    const outerVolume = (w * d * h) / 1000;
-    const innerVolume = Math.max(0, ((w - 2 * t) * (d - 2 * t) * (h - b)) / 1000);
-    const materialVolumeCm3 = Math.max(0, outerVolume - innerVolume);
-    const weightGrams = materialVolumeCm3 * 1.24;
+    
+    // Estimation du poids et du temps basée sur vos repères exacts :
+    // - Petite boîte 120x90 : ~37g, ~0.75h (45 min)
+    // - Grande boîte 180x175 : ~81g, ~1.5h (1h30)
+    const area = w * d;
+    const refSmallArea = 120 * 90;
+    const ratio = area / refSmallArea;
+    
+    const weightGrams = Math.max(20, Math.round(37 * ratio * (h / 33)));
+    const printTimeHours = Math.max(0.4, (0.75 * ratio * (h / 33)));
+
     const materialCost = (weightGrams / 1000) * pricingSettings.plaPricePerKg;
-    const printTimeHours = materialVolumeCm3 / 18;
     const electricityCost = (pricingSettings.printerPowerW / 1000) * printTimeHours * pricingSettings.kwhPrice;
-    const baseCost = materialCost + electricityCost + pricingSettings.laborFeePerBox;
-    const finalPrice = baseCost * (1 + pricingSettings.marginPercent / 100);
+    const amortizationCost = printTimeHours * 0.20; // 0.20€ par heure d'amortissement machine
+    
+    // Supplément grand format (> 150mm)
+    const largeFormatFee = (w > 150 || d > 150) ? 1.00 : 0.00;
+
+    const baseCost = materialCost + electricityCost + amortizationCost + pricingSettings.laborFeePerBox + largeFormatFee;
+    
+    // Application du coefficient x2.6 demandé
+    const finalPrice = baseCost * 2.6;
 
     return {
       weightGrams: Math.round(weightGrams),
       printTimeHours: printTimeHours.toFixed(1),
-      finalPrice: Math.max(0.80, finalPrice)
+      finalPrice: Math.max(1.50, finalPrice)
     };
   };
 
-  const boxesSubtotal = boxes.reduce((acc, box) => {
+  // Calcul du prix et du nombre de boîtes pour TOUS les tiroirs
+  const getAllBoxesFromDrawers = (dList) => {
+    let allBoxes = [];
+    dList.forEach((dItem) => {
+      const uW = dItem.dimensions.width / gridSize.cols;
+      const uD = dItem.dimensions.depth / gridSize.rows;
+      const actH = Math.max(5, dItem.dimensions.height - dItem.heightMargin);
+
+      dItem.layout.forEach((item) => {
+        const rawW = item.colSpan * uW;
+        const rawD = item.rowSpan * uD;
+
+        const bW = Math.max(10, Math.round((rawW - dItem.clearance) * 10) / 10);
+        const bD = Math.max(10, Math.round((rawD - dItem.clearance) * 10) / 10);
+        const bH = Math.max(10, Math.round(actH * 10) / 10);
+
+        allBoxes.push({
+          drawerName: dItem.name,
+          drawerId: dItem.id,
+          id: item.id,
+          width: bW,
+          depth: bD,
+          height: bH,
+          colSpan: item.colSpan,
+          rowSpan: item.rowSpan,
+          wallThickness: boxSettings.wallThickness,
+          bottomThickness: boxSettings.bottomThickness,
+          color: dItem.customColors[item.id] || getDimensionColor(item.colSpan, item.rowSpan)
+        });
+      });
+    });
+    return allBoxes;
+  };
+
+  const allDrawersBoxes = getAllBoxesFromDrawers(drawersList);
+
+  const boxesSubtotal = allDrawersBoxes.reduce((acc, box) => {
     const cost = calculateBoxCost(box);
     return acc + cost.finalPrice;
   }, 0);
 
-  const shippingCost = boxes.length > 0 ? pricingSettings.shippingCostBE : 0;
-  const totalPrice = boxesSubtotal + shippingCost;
-
-  const getOrderSummaryText = () => {
-    let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
-    summary += `--- COORDONNÉES CLIENT (BELGIQUE) ---\n`;
-    if (clientInfo.name) summary += `Nom : ${clientInfo.name}\n`;
-    if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
-    if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
-    if (clientInfo.address) summary += `Adresse postale : ${clientInfo.address}\n`;
-    if (clientInfo.relayPoint) summary += `Point Mondial Relay : ${clientInfo.relayPoint}\n`;
-    if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
-    if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
-
-    summary += `--- INFORMATIONS TECHNIQUES & TARIFS ESTIMÉS ---\n`;
-    summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
-    summary += `Jeu entre boîtes : ${clearance} mm\n`;
-    summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
-    summary += `Gravure du texte "3Dr" : Enfoncement 0.8mm sous le fond\n`;
-    summary += `Nombre de compartiments : ${boxes.length}\n`;
-    summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
-    summary += `Livraison Mondial Relay (Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
-    summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
-    summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
-    
-    boxes.forEach((b, idx) => {
-      summary += `\n[COMPARTIMENT #${idx + 1} : ${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}]\n`;
-    });
-
-    return summary;
-  };
-
-  const copyOrderSummary = () => {
-    navigator.clipboard.writeText(getOrderSummaryCleanText());
-    setCopiedSummary(true);
-    setTimeout(() => setCopiedSummary(false), 2000);
-  };
+  // Le total affiché en haut correspond UNIQUEMENT aux boîtes (hors frais de port)
+  const totalPrice = boxesSubtotal;
+  const shippingCost = allDrawersBoxes.length > 0 ? pricingSettings.shippingCostBE : 0;
+  const totalPriceWithShipping = totalPrice + shippingCost;
 
   const getOrderSummaryCleanText = () => {
     let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
@@ -438,30 +545,36 @@ export default function App() {
     if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
 
     summary += `--- INFORMATIONS TECHNIQUES & TARIFS ESTIMÉS ---\n`;
-    summary += `Dimensions Tiroir : ${drawer.width} x ${drawer.depth} x ${drawer.height} mm\n`;
-    summary += `Jeu entre boîtes : ${clearance} mm\n`;
-    summary += `Jeu de hauteur : ${heightMargin} mm (Hauteur boîtes : ${Math.max(5, drawer.height - heightMargin)} mm)\n`;
-    summary += `Gravure du texte "3Dr" : Enfoncement 0.8mm sous le fond\n`;
-    summary += `Nombre de compartiments : ${boxes.length}\n`;
+    summary += `Nombre de tiroirs configurés : ${drawersList.length}\n`;
+    summary += `Nombre total de compartiments : ${allDrawersBoxes.length}\n`;
     summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
     summary += `Livraison Mondial Relay (Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
-    summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
-    summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
-    
-    boxes.forEach((b, idx) => {
-      summary += `COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm - Couleur: ${b.color}\n`;
+    summary += `PRIX TOTAL ESTIMÉ (avec port) : ${totalPriceWithShipping.toFixed(2)} €\n\n`;
+    summary += `--- DÉTAIL DES TIROIRS ET COMPARTIMENTS ---\n`;
+
+    drawersList.forEach((dItem, index) => {
+      summary += `\n[TIROIR #${index + 1} : ${dItem.name}]\n`;
+      summary += `Dimensions Tiroir : ${dItem.dimensions.width} x ${dItem.dimensions.depth} x ${dItem.dimensions.height} mm\n`;
+      summary += `Jeu entre boîtes : ${dItem.clearance} mm | Jeu de hauteur : ${dItem.heightMargin} mm\n`;
+      
+      const drawerBoxes = allDrawersBoxes.filter(b => b.drawerId === dItem.id);
+      drawerBoxes.forEach((b, idx) => {
+        summary += `  -> Boîte #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm - Couleur: ${b.color}\n`;
+      });
     });
 
     return summary;
   };
 
+  const copyOrderSummary = () => {
+    navigator.clipboard.writeText(getOrderSummaryCleanText());
+    setCopiedSummary(true);
+    setTimeout(() => setCopiedSummary(false), 2000);
+  };
+
   const generateConfigLink = () => {
     const configData = {
-      drawer,
-      heightMargin,
-      clearance,
-      layout,
-      customColors
+      drawersList
     };
     const jsonStr = JSON.stringify(configData);
     const encoded = encodeURIComponent(jsonStr);
@@ -469,25 +582,49 @@ export default function App() {
   };
 
   const downloadAllSTL = () => {
-    // Génère et télécharge chaque compartiment dans un fichier .stl individuel valide pour OrcaSlicer
-    boxes.forEach((b, idx) => {
-      setTimeout(() => {
-        const singleBoxSTL = generateBoxSTL(b);
-        const blob = new Blob([singleBoxSTL], { type: 'model/stl' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `3Dr_Box_${idx + 1}_${b.colSpan}x${b.rowSpan}_${b.width}x${b.depth}x${b.height}mm.stl`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }, idx * 250); // Petit délai pour éviter que le navigateur ne bloque les téléchargements multiples
+    // Génère et télécharge chaque compartiment de TOUS les tiroirs dans un fichier .stl individuel
+    let globalIndex = 0;
+    drawersList.forEach((dItem) => {
+      const uW = dItem.dimensions.width / gridSize.cols;
+      const uD = dItem.dimensions.depth / gridSize.rows;
+      const actH = Math.max(5, dItem.dimensions.height - dItem.heightMargin);
+
+      dItem.layout.forEach((item, boxIdx) => {
+        globalIndex++;
+        const currentIndex = globalIndex;
+        setTimeout(() => {
+          const rawW = item.colSpan * uW;
+          const rawD = item.rowSpan * uD;
+
+          const bW = Math.max(10, Math.round((rawW - dItem.clearance) * 10) / 10);
+          const bD = Math.max(10, Math.round((rawD - dItem.clearance) * 10) / 10);
+          const bH = Math.max(10, Math.round(actH * 10) / 10);
+
+          const boxObj = {
+            width: bW,
+            depth: bD,
+            height: bH,
+            wallThickness: boxSettings.wallThickness,
+            bottomThickness: boxSettings.bottomThickness
+          };
+
+          const singleBoxSTL = generateBoxSTL(boxObj);
+          const blob = new Blob([singleBoxSTL], { type: 'model/stl' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          const sanitizeName = dItem.name.replace(/[^a-zA-Z0-9]/g, '_');
+          link.download = `3Dr_${sanitizeName}_Box_${boxIdx + 1}_${bW}x${bD}x${bH}mm.stl`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, currentIndex * 200);
+      });
     });
   };
 
   useEffect(() => {
-    // Permet de charger la configuration partagée depuis le lien si le paramètre config est présent dans l'URL
     const params = new URLSearchParams(window.location.search);
     const configParam = params.get('config');
     const adminParam = params.get('admin');
@@ -499,24 +636,30 @@ export default function App() {
     if (configParam) {
       try {
         const parsed = JSON.parse(decodeURIComponent(configParam));
-        if (parsed.drawer) {
-          setDrawer(parsed.drawer);
-          setDrawerInputs({
-            width: String(parsed.drawer.width),
-            depth: String(parsed.drawer.depth),
-            height: String(parsed.drawer.height)
-          });
+        if (parsed.drawersList && parsed.drawersList.length > 0) {
+          setDrawersList(parsed.drawersList);
+          setActiveDrawerId(parsed.drawersList[0].id);
+        } else if (parsed.drawer) {
+          // Rétrocompatibilité avec les liens à tiroir unique
+          const singleDrawer = {
+            id: 'drawer-1',
+            name: 'Tiroir 1',
+            dimensions: parsed.drawer,
+            dimensionInputs: {
+              width: String(parsed.drawer.width),
+              depth: String(parsed.drawer.depth),
+              height: String(parsed.drawer.height)
+            },
+            heightMargin: parsed.heightMargin ?? 2,
+            heightMarginInput: String(parsed.heightMargin ?? 2),
+            clearance: parsed.clearance ?? 1,
+            clearanceInput: String(parsed.clearance ?? 1),
+            layout: parsed.layout || [],
+            customColors: parsed.customColors || {}
+          };
+          setDrawersList([singleDrawer]);
+          setActiveDrawerId('drawer-1');
         }
-        if (parsed.heightMargin !== undefined) {
-          setHeightMargin(parsed.heightMargin);
-          setHeightMarginInput(String(parsed.heightMargin));
-        }
-        if (parsed.clearance !== undefined) {
-          setClearance(parsed.clearance);
-          setClearanceInput(String(parsed.clearance));
-        }
-        if (parsed.layout) setLayout(parsed.layout);
-        if (parsed.customColors) setCustomColors(parsed.customColors);
       } catch (err) {
         console.error("Erreur de décodage du lien de configuration :", err);
       }
@@ -534,6 +677,20 @@ export default function App() {
     const shareableConfigLink = generateConfigLink();
     const cleanSummary = getOrderSummaryCleanText();
 
+    // Construction propre du tableau HTML et du texte pour les templates EmailJS
+    let htmlBoxesList = `<ul style="padding-left: 15px; margin: 0; font-family: sans-serif; font-size: 13px; color: #334155;">`;
+    allDrawersBoxes.forEach((b, idx) => {
+      htmlBoxesList += `<li style="margin-bottom: 6px;"><strong>Compartiment #${idx + 1}</strong> (${b.drawerName}) : <b>${b.width} × ${b.depth} × ${b.height} mm</b> (Grille ${b.colSpan}×${b.rowSpan} - Couleur: ${b.color})</li>`;
+    });
+    htmlBoxesList += `</ul>`;
+
+    let htmlDrawersList = `<ul style="padding-left: 15px; margin: 0; font-family: sans-serif; font-size: 13px; color: #334155;">`;
+    drawersList.forEach((dItem, idx) => {
+      const count = allDrawersBoxes.filter(b => b.drawerId === dItem.id).length;
+      htmlDrawersList += `<li style="margin-bottom: 4px;"><strong>${dItem.name}</strong> : ${dItem.dimensions.width} × ${dItem.dimensions.depth} × ${dItem.dimensions.height} mm (${count} boîtes)</li>`;
+    });
+    htmlDrawersList += `</ul>`;
+
     const templateParams = {
       to_email: '3dr.global@gmail.com',
       client_name: clientInfo.name,
@@ -542,14 +699,18 @@ export default function App() {
       client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (Belgique)`,
       client_relay_point: clientInfo.relayPoint,
       client_notes: clientInfo.notes || 'Aucune note',
-      drawer_dimensions: `${drawer.width} x ${drawer.depth} x ${drawer.height} mm`,
-      box_count: boxes.length,
+      drawer_dimensions: `${drawersList.length} tiroir(s) configuré(s)`,
+      box_count: allDrawersBoxes.length,
       clearance: clearance,
       height_margin: heightMargin,
-      total_price: totalPrice.toFixed(2),
+      total_price: totalPriceWithShipping.toFixed(2),
+      boxes_subtotal: boxesSubtotal.toFixed(2),
+      shipping_cost: shippingCost.toFixed(2),
       order_summary: cleanSummary,
+      html_drawers_list: htmlDrawersList,
+      html_boxes_list: htmlBoxesList,
       config_link: shareableConfigLink,
-      stl_content: `Lien Administrateur 3Dr (avec option de téléchargement STL) :\n${shareableConfigLink}`
+      stl_content: shareableConfigLink
     };
 
     const SERVICE_ID = 'service_fyg2wy1';
@@ -611,7 +772,12 @@ export default function App() {
   };
 
   const resetLayoutToDefault = () => {
-    setLayout(defaultLayout);
+    setLayout([
+      { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 2 },
+      { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 },
+      { id: '3', colStart: 0, rowStart: 2, colSpan: 2, rowSpan: 2 },
+      { id: '4', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }
+    ]);
     setSelectionStart(null);
     setSelectionEnd(null);
   };
@@ -961,14 +1127,14 @@ export default function App() {
         <div className="bg-amber-500 text-slate-900 px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 shadow-md">
           <div className="flex items-center gap-2">
             <Lock className="w-4 h-4" />
-            <span>Mode Administration 3Dr (Commande Reçue)</span>
+            <span>Mode Administration 3Dr ({drawersList.length} tiroir(s) - {allDrawersBoxes.length} boîte(s))</span>
           </div>
           <button
             onClick={downloadAllSTL}
             className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <ArrowDown className="w-4 h-4" />
-            Télécharger les STL à imprimer
+            Télécharger les STL à imprimer ({allDrawersBoxes.length})
           </button>
         </div>
       )}
@@ -999,12 +1165,50 @@ export default function App() {
               <Euro className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             <div>
-              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Estimation Total</span>
+              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Total Boîtes ({allDrawersBoxes.length})</span>
               <span className="text-xs sm:text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
             </div>
           </div>
         </div>
       </header>
+
+      {/* BARRE DE SÉLECTION / AJOUT DE TIROIRS */}
+      <div className="bg-slate-800 text-white px-3 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-inner">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Mes Tiroirs :</span>
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+          {drawersList.map((dItem) => {
+            const isActive = dItem.id === activeDrawerId;
+            return (
+              <div
+                key={dItem.id}
+                onClick={() => setActiveDrawerId(dItem.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                }`}
+              >
+                <span>{dItem.name}</span>
+                {drawersList.length > 1 && (
+                  <button
+                    onClick={(e) => removeDrawer(dItem.id, e)}
+                    className="p-0.5 hover:bg-slate-900/40 rounded transition text-slate-300 hover:text-white"
+                    title="Supprimer ce tiroir"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <button
+          onClick={addNewDrawer}
+          className="ml-auto px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 cursor-pointer shadow-sm"
+        >
+          <span>+ Ajouter un tiroir</span>
+        </button>
+      </div>
 
       {/* MOBILE TABS */}
       <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0 z-20">
@@ -1035,7 +1239,7 @@ export default function App() {
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-800">Passer Commande</h3>
+                <h3 className="text-sm font-bold text-slate-800">Passer Commande ({drawersList.length} tiroir(s))</h3>
               </div>
               <button 
                 onClick={() => setShowShareModal(false)}
@@ -1108,7 +1312,11 @@ export default function App() {
 
                 <div className="p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 mt-2">
                   <div className="flex justify-between items-center text-slate-700 font-semibold">
-                    <span>Sous-total boîtes :</span>
+                    <span>Nombre de tiroirs :</span>
+                    <span>{drawersList.length}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-slate-700 font-semibold">
+                    <span>Sous-total boîtes ({allDrawersBoxes.length}) :</span>
                     <span>{boxesSubtotal.toFixed(2)} €</span>
                   </div>
                   <div className="flex justify-between items-center text-slate-700 font-semibold">
@@ -1119,8 +1327,8 @@ export default function App() {
                     <span>{shippingCost.toFixed(2)} €</span>
                   </div>
                   <div className="border-t border-indigo-200 pt-1 flex justify-between items-center text-indigo-900 font-black text-sm">
-                    <span>PRIX ESTIMÉ TOTAL :</span>
-                    <span>{totalPrice.toFixed(2)} €</span>
+                    <span>PRIX TOTAL ESTIMÉ :</span>
+                    <span>{totalPriceWithShipping.toFixed(2)} €</span>
                   </div>
                 </div>
               </div>
@@ -1160,7 +1368,7 @@ export default function App() {
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
-                Dimensions du Tiroir (mm)
+                Dimensions ({activeDrawer.name})
               </h2>
             </div>
             
@@ -1272,13 +1480,13 @@ export default function App() {
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Grid className="w-3.5 h-3.5 text-indigo-600" />
-                Plan 2D (Grille 4x4)
+                Plan 2D ({activeDrawer.name})
               </h2>
               <div className="flex items-center gap-1">
                 <button
                   onClick={clearLayout}
                   className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
-                  title="Vider le tiroir"
+                  title="Vider ce tiroir"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                   Vider
@@ -1380,7 +1588,7 @@ export default function App() {
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                Boîtes à Imprimer ({boxes.length})
+                Boîtes du tiroir ({boxes.length})
               </h2>
             </div>
 
@@ -1462,7 +1670,7 @@ export default function App() {
           
           <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-2.5 rounded-xl text-[10px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none z-10">
             <Eye className="w-4 h-4 text-indigo-600" />
-            <span>Vue 3D (Glisser pour faire tourner)</span>
+            <span>Vue 3D ({activeDrawer.name})</span>
           </div>
         </div>
       </div>
