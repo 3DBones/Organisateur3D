@@ -419,6 +419,12 @@ export default function App() {
     return summary;
   };
 
+  const copyOrderSummary = () => {
+    navigator.clipboard.writeText(getOrderSummaryCleanText());
+    setCopiedSummary(true);
+    setTimeout(() => setCopiedSummary(false), 2000);
+  };
+
   const getOrderSummaryCleanText = () => {
     let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
     summary += `--- COORDONNÉES CLIENT (BELGIQUE) ---\n`;
@@ -1131,13 +1137,6 @@ export default function App() {
                 <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
                 Dimensions du Tiroir (mm)
               </h2>
-              <button
-                onClick={downloadAllSTL}
-                className="px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold hover:bg-indigo-100 transition flex items-center gap-1"
-                title="Télécharger tous les STL"
-              >
-                <ArrowDown className="w-3 h-3" /> STL
-              </button>
             </div>
             
             <div className="grid grid-cols-3 gap-2">
