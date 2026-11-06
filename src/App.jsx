@@ -469,20 +469,21 @@ export default function App() {
   };
 
   const downloadAllSTL = () => {
-    let combinedSTL = '';
+    // Génère et télécharge chaque compartiment dans un fichier .stl individuel valide pour OrcaSlicer
     boxes.forEach((b, idx) => {
-      combinedSTL += `\n/* COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}) */\n`;
-      combinedSTL += generateBoxSTL(b) + '\n';
+      setTimeout(() => {
+        const singleBoxSTL = generateBoxSTL(b);
+        const blob = new Blob([singleBoxSTL], { type: 'model/stl' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `3Dr_Box_${idx + 1}_${b.colSpan}x${b.rowSpan}_${b.width}x${b.depth}x${b.height}mm.stl`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      }, idx * 250); // Petit délai pour éviter que le navigateur ne bloque les téléchargements multiples
     });
-    const blob = new Blob([combinedSTL], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `3Dr_Tiroir_${drawer.width}x${drawer.depth}.stl`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   useEffect(() => {
