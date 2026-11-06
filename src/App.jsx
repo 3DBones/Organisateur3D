@@ -432,12 +432,10 @@ export default function App() {
 
     setIsSending(true);
 
-    // 1. Génération du contenu STL combiné de toutes les boîtes
-    let combinedSTL = '';
-    boxes.forEach((b, idx) => {
-      combinedSTL += `\n/* COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}) */\n`;
-      combinedSTL += generateBoxSTL(b) + '\n';
-    });
+    // 1. Synthèse des dimensions des boîtes pour l'e-mail (évite l'erreur HTTP 413 Payload Too Large)
+    const boxesSummaryText = boxes.map((b, idx) => 
+      `Compartiment #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm - Couleur: ${b.color}`
+    ).join('\n');
 
     // 2. Préparation des variables pour l'API REST EmailJS
     const templateParams = {
@@ -453,10 +451,10 @@ export default function App() {
       height_margin: heightMargin,
       total_price: totalPrice.toFixed(2),
       order_summary: getOrderSummaryText(),
-      stl_content: combinedSTL
+      stl_content: boxesSummaryText
     };
 
-    // Identifiants EmailJS
+    // Tes Identifiants EmailJS conservés
     const SERVICE_ID = 'service_fyg2wy1';
     const PUBLIC_KEY = 'ccGFwjgEOJLKeTkpU';
     const TEMPLATE_DEVIS_ID = 'template_5ynz5gn';
@@ -464,7 +462,6 @@ export default function App() {
 
     try {
       if (SERVICE_ID !== 'YOUR_SERVICE_ID' && PUBLIC_KEY !== 'YOUR_PUBLIC_KEY') {
-        // Fonction générique d'envoi via l'API REST EmailJS (sans dépendance NPM)
         const sendEmailRequest = async (templateId) => {
           return fetch('https://api.emailjs.com/api/v1.0/email/send', {
             method: 'POST',
@@ -479,21 +476,42 @@ export default function App() {
         };
 
         // Envoi Email 1 : Devis & Coordonnées Client
-        await sendEmailRequest(TEMPLATE_DEVIS_ID);
+        const resDevis = await sendEmailRequest(TEMPLATE_DEVIS_ID);
+        if (!resDevis.ok) {
+          const errText = await resDevis.text();
+          throw new Error(`EmailJS (Devis): ${resDevis.status} ${errText}`);
+        }
 
-        // Envoi Email 2 : Fichiers STL combinés
-        await sendEmailRequest(TEMPLATE_STL_ID);
+        // Envoi Email 2 : Récapitulatif
+        if (TEMPLATE_STL_ID) {
+          await sendEmailRequest(TEMPLATE_STL_ID);
+        }
       } else {
-        // Simulation locale si les clés ne sont pas encore configurées
         console.log("EmailJS Params (Simulation REST API) :", templateParams);
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
+
+      // Téléchargement automatique du fichier STL complet sur la machine
+      let combinedSTL = '';
+      boxes.forEach((b, idx) => {
+        combinedSTL += `\n/* COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}) */\n`;
+        combinedSTL += generateBoxSTL(b) + '\n';
+      });
+      const blob = new Blob([combinedSTL], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `3Dr_${clientInfo.name.replace(/\s+/g, '_')}_${drawer.width}x${drawer.depth}.stl`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       setOrderSent(true);
       setIsSending(false);
     } catch (error) {
       console.error("Erreur d'envoi EmailJS :", error);
-      alert("Une erreur est survenue lors de l'envoi de la commande.");
+      alert("Une erreur est survenue lors de l'envoi : " + error.message);
       setIsSending(false);
     }
   };
