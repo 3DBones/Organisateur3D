@@ -341,6 +341,7 @@ export default function App() {
     { name: 'Gris', hex: '#64748b' }
   ];
 
+  const [isAdminMode, setIsAdminMode] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
   const [selectionEnd, setSelectionEnd] = useState(null);
@@ -464,7 +465,7 @@ export default function App() {
     };
     const jsonStr = JSON.stringify(configData);
     const encoded = encodeURIComponent(jsonStr);
-    return `${window.location.origin}${window.location.pathname}?config=${encoded}`;
+    return `${window.location.origin}${window.location.pathname}?config=${encoded}&admin=true`;
   };
 
   const downloadAllSTL = () => {
@@ -488,6 +489,12 @@ export default function App() {
     // Permet de charger la configuration partagée depuis le lien si le paramètre config est présent dans l'URL
     const params = new URLSearchParams(window.location.search);
     const configParam = params.get('config');
+    const adminParam = params.get('admin');
+
+    if (adminParam === 'true') {
+      setIsAdminMode(true);
+    }
+
     if (configParam) {
       try {
         const parsed = JSON.parse(decodeURIComponent(configParam));
@@ -516,8 +523,8 @@ export default function App() {
   }, []);
 
   const sendEmailOrder = async () => {
-    if (!clientInfo.name || !clientInfo.email || !clientInfo.postalCode || !clientInfo.city || !clientInfo.address) {
-      alert("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse postale).");
+    if (!clientInfo.name || !clientInfo.email || !clientInfo.postalCode || !clientInfo.city || !clientInfo.address || !clientInfo.relayPoint) {
+      alert("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse postale, Point Mondial Relay).");
       return;
     }
 
@@ -532,7 +539,7 @@ export default function App() {
       client_email: clientInfo.email,
       client_phone: clientInfo.phone || 'Non renseigné',
       client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (Belgique)`,
-      client_relay_point: clientInfo.relayPoint || 'Non renseigné',
+      client_relay_point: clientInfo.relayPoint,
       client_notes: clientInfo.notes || 'Aucune note',
       drawer_dimensions: `${drawer.width} x ${drawer.depth} x ${drawer.height} mm`,
       box_count: boxes.length,
@@ -541,7 +548,7 @@ export default function App() {
       total_price: totalPrice.toFixed(2),
       order_summary: cleanSummary,
       config_link: shareableConfigLink,
-      stl_content: `Lien de téléchargement des STL et configuration :\n${shareableConfigLink}`
+      stl_content: `Lien Administrateur 3Dr (avec option de téléchargement STL) :\n${shareableConfigLink}`
     };
 
     const SERVICE_ID = 'service_fyg2wy1';
@@ -948,6 +955,23 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
+      {/* BANNIÈRE ADMIN SI OUVERT DEPUIS L'E-MAIL DE COMMANDE */}
+      {isAdminMode && (
+        <div className="bg-amber-500 text-slate-900 px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 shadow-md">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4" />
+            <span>Mode Administration 3Dr (Commande Reçue)</span>
+          </div>
+          <button
+            onClick={downloadAllSTL}
+            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+          >
+            <ArrowDown className="w-4 h-4" />
+            Télécharger les STL à imprimer
+          </button>
+        </div>
+      )}
+
       {/* HEADER TOP BAR */}
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-3">
@@ -1075,7 +1099,7 @@ export default function App() {
                 />
                 <input
                   type="text"
-                  placeholder="Point Mondial Relay souhaité"
+                  placeholder="Point Mondial Relay souhaité *"
                   value={clientInfo.relayPoint}
                   onChange={(e) => setClientInfo({ ...clientInfo, relayPoint: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
@@ -1120,7 +1144,7 @@ export default function App() {
 
               {orderSent && (
                 <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-center font-bold flex items-center justify-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Devis envoyé !
+                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Demande de devis envoyée !
                 </div>
               )}
             </div>
