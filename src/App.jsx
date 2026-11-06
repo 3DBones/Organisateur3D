@@ -324,6 +324,7 @@ export default function App() {
     email: '',
     phone: '',
     address: '',
+    relayPoint: '',
     city: '',
     postalCode: '',
     notes: ''
@@ -395,7 +396,8 @@ export default function App() {
     if (clientInfo.name) summary += `Nom : ${clientInfo.name}\n`;
     if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
     if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
-    if (clientInfo.address) summary += `Adresse / Point Relay : ${clientInfo.address}\n`;
+    if (clientInfo.address) summary += `Adresse postale : ${clientInfo.address}\n`;
+    if (clientInfo.relayPoint) summary += `Point Mondial Relay : ${clientInfo.relayPoint}\n`;
     if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
     if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
 
@@ -408,11 +410,10 @@ export default function App() {
     summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
     summary += `Livraison Mondial Relay (Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
     summary += `PRIX TOTAL ESTIMÉ : ${totalPrice.toFixed(2)} €\n\n`;
-    summary += `--- DÉTAIL DES COMPARTIMENTS & STL SÉCURISÉS ---\n`;
+    summary += `--- DÉTAIL DES COMPARTIMENTS ---\n`;
     
     boxes.forEach((b, idx) => {
       summary += `\n[COMPARTIMENT #${idx + 1} : ${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}]\n`;
-      summary += generateBoxSTL(b) + `\n----------------------------------------\n`;
     });
 
     return summary;
@@ -424,7 +425,8 @@ export default function App() {
     if (clientInfo.name) summary += `Nom : ${clientInfo.name}\n`;
     if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
     if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
-    if (clientInfo.address) summary += `Adresse / Point Relay : ${clientInfo.address}\n`;
+    if (clientInfo.address) summary += `Adresse postale : ${clientInfo.address}\n`;
+    if (clientInfo.relayPoint) summary += `Point Mondial Relay : ${clientInfo.relayPoint}\n`;
     if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
     if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
 
@@ -446,35 +448,85 @@ export default function App() {
     return summary;
   };
 
-  const copyOrderSummary = () => {
-    navigator.clipboard.writeText(getOrderSummaryText());
-    setCopiedSummary(true);
-    setTimeout(() => setCopiedSummary(false), 2000);
+  const generateConfigLink = () => {
+    const configData = {
+      drawer,
+      heightMargin,
+      clearance,
+      layout,
+      customColors
+    };
+    const jsonStr = JSON.stringify(configData);
+    const encoded = encodeURIComponent(jsonStr);
+    return `${window.location.origin}${window.location.pathname}?config=${encoded}`;
   };
+
+  const downloadAllSTL = () => {
+    let combinedSTL = '';
+    boxes.forEach((b, idx) => {
+      combinedSTL += `\n/* COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}) */\n`;
+      combinedSTL += generateBoxSTL(b) + '\n';
+    });
+    const blob = new Blob([combinedSTL], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `3Dr_Tiroir_${drawer.width}x${drawer.depth}.stl`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  useEffect(() => {
+    // Permet de charger la configuration partagée depuis le lien si le paramètre config est présent dans l'URL
+    const params = new URLSearchParams(window.location.search);
+    const configParam = params.get('config');
+    if (configParam) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(configParam));
+        if (parsed.drawer) {
+          setDrawer(parsed.drawer);
+          setDrawerInputs({
+            width: String(parsed.drawer.width),
+            depth: String(parsed.drawer.depth),
+            height: String(parsed.drawer.height)
+          });
+        }
+        if (parsed.heightMargin !== undefined) {
+          setHeightMargin(parsed.heightMargin);
+          setHeightMarginInput(String(parsed.heightMargin));
+        }
+        if (parsed.clearance !== undefined) {
+          setClearance(parsed.clearance);
+          setClearanceInput(String(parsed.clearance));
+        }
+        if (parsed.layout) setLayout(parsed.layout);
+        if (parsed.customColors) setCustomColors(parsed.customColors);
+      } catch (err) {
+        console.error("Erreur de décodage du lien de configuration :", err);
+      }
+    }
+  }, []);
 
   const sendEmailOrder = async () => {
     if (!clientInfo.name || !clientInfo.email || !clientInfo.postalCode || !clientInfo.city || !clientInfo.address) {
-      alert("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse/Point Relay).");
+      alert("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse postale).");
       return;
     }
 
     setIsSending(true);
 
-    // Synthèse concise des dimensions des boîtes pour l'e-mail (gros fichier STL exclu)
-    const boxesSummaryText = boxes.map((b, idx) => 
-      `Compartiment #${idx + 1} (${b.colSpan}x${b.rowSpan}) : ${b.width} x ${b.depth} x ${b.height} mm - Couleur: ${b.color}`
-    ).join('\n');
-
-    // Récapitulatif clean sans données volumineuses
+    const shareableConfigLink = generateConfigLink();
     const cleanSummary = getOrderSummaryCleanText();
 
-    // Préparation des variables légères pour l'API REST EmailJS (Taille totale ~ 2 Kb << 50 Kb limit)
     const templateParams = {
       to_email: '3dr.global@gmail.com',
       client_name: clientInfo.name,
       client_email: clientInfo.email,
       client_phone: clientInfo.phone || 'Non renseigné',
       client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (Belgique)`,
+      client_relay_point: clientInfo.relayPoint || 'Non renseigné',
       client_notes: clientInfo.notes || 'Aucune note',
       drawer_dimensions: `${drawer.width} x ${drawer.depth} x ${drawer.height} mm`,
       box_count: boxes.length,
@@ -482,10 +534,10 @@ export default function App() {
       height_margin: heightMargin,
       total_price: totalPrice.toFixed(2),
       order_summary: cleanSummary,
-      stl_content: boxesSummaryText
+      config_link: shareableConfigLink,
+      stl_content: `Lien de téléchargement des STL et configuration :\n${shareableConfigLink}`
     };
 
-    // Vos identifiants EmailJS
     const SERVICE_ID = 'service_fyg2wy1';
     const PUBLIC_KEY = 'ccGFwjgEOJLKeTkpU';
     const TEMPLATE_DEVIS_ID = 'template_5ynz5gn';
@@ -506,14 +558,12 @@ export default function App() {
           });
         };
 
-        // Envoi Email 1 : Devis & Coordonnées Client
         const resDevis = await sendEmailRequest(TEMPLATE_DEVIS_ID);
         if (!resDevis.ok) {
           const errText = await resDevis.text();
           throw new Error(`EmailJS (Devis): ${resDevis.status} ${errText}`);
         }
 
-        // Envoi Email 2 : Récapitulatif technique
         if (TEMPLATE_STL_ID) {
           await sendEmailRequest(TEMPLATE_STL_ID);
         }
@@ -521,22 +571,6 @@ export default function App() {
         console.log("EmailJS Params (Simulation REST API) :", templateParams);
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
-
-      // Téléchargement automatique du fichier STL complet sur la machine
-      let combinedSTL = '';
-      boxes.forEach((b, idx) => {
-        combinedSTL += `\n/* COMPARTIMENT #${idx + 1} (${b.colSpan}x${b.rowSpan} - ${b.width}x${b.depth}x${b.height}mm - Couleur: ${b.color}) */\n`;
-        combinedSTL += generateBoxSTL(b) + '\n';
-      });
-      const blob = new Blob([combinedSTL], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `3Dr_${clientInfo.name.replace(/\s+/g, '_')}_${drawer.width}x${drawer.depth}.stl`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       setOrderSent(true);
       setIsSending(false);
@@ -1028,9 +1062,16 @@ export default function App() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Adresse ou Point Mondial Relay souhaité en Belgique *"
+                  placeholder="Adresse postale *"
                   value={clientInfo.address}
                   onChange={(e) => setClientInfo({ ...clientInfo, address: e.target.value })}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
+                />
+                <input
+                  type="text"
+                  placeholder="Point Mondial Relay souhaité"
+                  value={clientInfo.relayPoint}
+                  onChange={(e) => setClientInfo({ ...clientInfo, relayPoint: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                 />
 
@@ -1073,7 +1114,7 @@ export default function App() {
 
               {orderSent && (
                 <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-center font-bold flex items-center justify-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Commande prête et envoyée vers 3dr.global@gmail.com !
+                  <CheckCircle className="w-4 h-4 text-emerald-600" /> Devis envoyé !
                 </div>
               )}
             </div>
@@ -1085,10 +1126,19 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-slate-100 space-y-3">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-              <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
-              Dimensions du Tiroir (mm)
-            </h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
+                Dimensions du Tiroir (mm)
+              </h2>
+              <button
+                onClick={downloadAllSTL}
+                className="px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-bold hover:bg-indigo-100 transition flex items-center gap-1"
+                title="Télécharger tous les STL"
+              >
+                <ArrowDown className="w-3 h-3" /> STL
+              </button>
+            </div>
             
             <div className="grid grid-cols-3 gap-2">
               <div>
