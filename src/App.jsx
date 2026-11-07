@@ -173,6 +173,8 @@ const createRoundedBoxShape = (width, depth, radius = 8) => {
 };
 
 export default function App() {
+  const MAX_COMPARTMENT_SIZE = 240;
+
   const defaultLayout = [
     { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 4 },
     { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 },
@@ -539,11 +541,9 @@ export default function App() {
       return;
     }
 
-    // Vérification de la limite max des compartiments (234x234 mm)
-    const MAX_COMPARTMENT_SIZE = 234;
     const oversizedBox = allDrawersBoxes.find(b => b.width > MAX_COMPARTMENT_SIZE || b.depth > MAX_COMPARTMENT_SIZE);
     if (oversizedBox) {
-      alert(`Erreur : Le compartiment #${oversizedBox.width}x${oversizedBox.height} dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm pour l'imprimante Bambu Lab P1S.`);
+      alert(`Erreur : Le compartiment (${oversizedBox.width}x${oversizedBox.depth} mm) dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm.`);
       return;
     }
 
@@ -759,7 +759,6 @@ export default function App() {
     const bounds = getSelectionBounds();
     if (!bounds) return;
 
-    // Vérification avant fusion de la taille du compartiment (Max 234 x 234 mm)
     const unitWidth = drawer.width / gridSize.cols;
     const unitDepth = drawer.depth / gridSize.rows;
     const testRawW = bounds.colSpan * unitWidth;
@@ -767,9 +766,8 @@ export default function App() {
     const testBW = Math.max(10, Math.round((testRawW - clearance) * 10) / 10);
     const testBD = Math.max(10, Math.round((testRawD - clearance) * 10) / 10);
 
-    const MAX_COMPARTMENT_SIZE = 234;
     if (testBW > MAX_COMPARTMENT_SIZE || testBD > MAX_COMPARTMENT_SIZE) {
-      alert(`Impossible de fusionner : ce compartiment ferait ${testBW}x${testBD} mm, ce qui dépasse la limite maximale de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm (Bambu Lab P1S).`);
+      alert(`Impossible de fusionner : ce compartiment ferait ${testBW}x${testBD} mm, ce qui dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm.`);
       return;
     }
 
@@ -1234,7 +1232,6 @@ export default function App() {
               </h2>
             </div>
             
-            {/* Mention demandée sous dimensions */}
             <p className="text-[10px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
               Ce sont les dimensions internes précises du tiroir.
             </p>
@@ -1368,14 +1365,15 @@ export default function App() {
 
             <p className="text-[10px] text-slate-500 mb-2 flex items-center gap-1">
               <MousePointerClick className="w-3 h-3 text-indigo-500" />
-              <span>Faites glisser votre doigt ou tapez 2 cases pour fusionner (Max compartiment : 234×234 mm).</span>
+              <span>Faites glisser votre doigt ou tapez 2 cases pour fusionner (Max compartiment : 240×240 mm).</span>
             </p>
 
             <div 
               ref={gridContainerRef}
               onTouchMove={handleTouchMove}
               onTouchEnd={() => setIsSelecting(false)}
-              className="relative w-full aspect-square border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none"
+              style={{ aspectRatio: `${drawer.width} / ${drawer.depth}` }}
+              className="relative w-full max-h-[320px] mx-auto border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none"
             >
               <div className="absolute inset-0 z-0">
                 {layout.map((b) => {
