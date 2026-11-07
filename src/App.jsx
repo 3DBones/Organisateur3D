@@ -47,70 +47,10 @@ const getDimensionColor = (colSpan, rowSpan) => {
   return colorMap[key] || '#64748b';
 };
 
-const create3DrTextShapes = (scale = 1) => {
-  const shapes = [];
-  const sw = 3.2 * scale;
-
-  const s3 = new THREE.Shape();
-  const ox3 = -14 * scale;
-  const oy3 = -7 * scale;
-
-  s3.moveTo(ox3, oy3 + 14 * scale);
-  s3.lineTo(ox3 + 9 * scale, oy3 + 14 * scale);
-  s3.lineTo(ox3 + 9 * scale, oy3 + 14 * scale - sw);
-  s3.lineTo(ox3 + sw * 1.2, oy3 + 8 * scale);
-  s3.lineTo(ox3 + 5 * scale, oy3 + 8 * scale);
-  s3.quadraticCurveTo(ox3 + 9.5 * scale, oy3 + 8 * scale, ox3 + 9.5 * scale, oy3 + 3.5 * scale);
-  s3.quadraticCurveTo(ox3 + 9.5 * scale, oy3 - 1 * scale, ox3 + 4.5 * scale, oy3 - 1 * scale);
-  s3.lineTo(ox3, oy3 - 1 * scale);
-  s3.lineTo(ox3, oy3 + sw - 1 * scale);
-  s3.lineTo(ox3 + 4.5 * scale, oy3 + sw - 1 * scale);
-  s3.quadraticCurveTo(ox3 + 6.3 * scale, oy3 + sw - 1 * scale, ox3 + 6.3 * scale, oy3 + 3.5 * scale);
-  s3.quadraticCurveTo(ox3 + 6.3 * scale, oy3 + 8 * scale - sw, ox3 + 4 * scale, oy3 + 8 * scale - sw);
-  s3.lineTo(ox3, oy3 + 8 * scale - sw);
-  shapes.push(s3);
-
-  const sD = new THREE.Shape();
-  const oxD = -2 * scale;
-  const oyD = -8 * scale;
-
-  sD.moveTo(oxD, oyD);
-  sD.lineTo(oxD + 6.5 * scale, oyD);
-  sD.quadraticCurveTo(oxD + 13.5 * scale, oyD, oxD + 13.5 * scale, oyD + 7.5 * scale);
-  sD.quadraticCurveTo(oxD + 13.5 * scale, oyD + 15 * scale, oxD + 6.5 * scale, oyD + 15 * scale);
-  sD.lineTo(oxD, oyD + 15 * scale);
-  
-  const holeD = new THREE.Path();
-  holeD.moveTo(oxD + sw, oyD + sw);
-  holeD.lineTo(oxD + 6 * scale, oyD + sw);
-  holeD.quadraticCurveTo(oxD + 10.3 * scale, oyD + sw, oxD + 10.3 * scale, oyD + 7.5 * scale);
-  holeD.quadraticCurveTo(oxD + 10.3 * scale, oyD + 15 * scale - sw, oxD + 6 * scale, oyD + 15 * scale - sw);
-  holeD.lineTo(oxD + sw, oyD + 15 * scale - sw);
-  sD.holes.push(holeD);
-  shapes.push(sD);
-
-  const sr = new THREE.Shape();
-  const oxr = 13.5 * scale;
-  const oyr = -8 * scale;
-
-  sr.moveTo(oxr, oyr);
-  sr.lineTo(oxr + sw, oyr);
-  sr.lineTo(oxr + sw, oyr + 4.5 * scale);
-  sr.quadraticCurveTo(oxr + 2.5 * scale, oyr + 7.5 * scale, oxr + 6 * scale, oyr + 7.5 * scale);
-  sr.lineTo(oxr + 6 * scale, oyr + 7.5 * scale - sw);
-  sr.quadraticCurveTo(oxr + sw + 1 * scale, oyr + 7.5 * scale - sw, oxr + sw, oyr + 4.5 * scale);
-  sr.lineTo(oxr + sw, oyr + 8.5 * scale);
-  sr.lineTo(oxr, oyr + 8.5 * scale);
-  shapes.push(sr);
-
-  return shapes;
-};
-
 const generateBoxSTL = (box) => {
   const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
   const radius = 8;
   const segments = 10;
-  const logoDepth = 0.8;
 
   const generateRoundedPolygonPoints = (width, depth, rad = 8, segs = 10) => {
     const r = Math.min(rad, width / 2 - 0.1, depth / 2 - 0.1);
@@ -211,43 +151,6 @@ const generateBoxSTL = (box) => {
     addQuad(o1, o2, i2, i1, [0, 0, 1]);
   }
 
-  const scale = Math.min(w, d) < 60 ? 0.6 : 1.0;
-  const textShapes = create3DrTextShapes(scale);
-
-  textShapes.forEach((shape) => {
-    const points = shape.extractPoints(6);
-    const shapeContour = points.shape;
-
-    for (let i = 0; i < shapeContour.length; i++) {
-      const next = (i + 1) % shapeContour.length;
-      const x1 = w / 2 + shapeContour[i].x;
-      const y1 = d / 2 + shapeContour[i].y;
-      const x2 = w / 2 + shapeContour[next].x;
-      const y2 = d / 2 + shapeContour[next].y;
-
-      const v1 = [x1, y1, 0];
-      const v2 = [x2, y2, 0];
-      const v1z = [x1, y1, logoDepth];
-      const v2z = [x2, y2, logoDepth];
-
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const len = Math.hypot(dx, dy) || 1;
-      const nx = -dy / len;
-      const ny = dx / len;
-
-      addQuad(v1, v2, v2z, v1z, [nx, ny, 0]);
-    }
-
-    const centerLogo = [w / 2, d / 2, logoDepth];
-    for (let i = 0; i < shapeContour.length; i++) {
-      const next = (i + 1) % shapeContour.length;
-      const p1 = [w / 2 + shapeContour[i].x, d / 2 + shapeContour[i].y, logoDepth];
-      const p2 = [w / 2 + shapeContour[next].x, d / 2 + shapeContour[next].y, logoDepth];
-      addFacet([0, 0, 1], centerLogo, p1, p2);
-    }
-  });
-
   stl += `endsolid drawer_box_3dr_${w}x${d}x${h}\n`;
   return stl;
 };
@@ -271,12 +174,11 @@ const createRoundedBoxShape = (width, depth, radius = 8) => {
 
 export default function App() {
   const defaultLayout = [
-    { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 4 }, // 2x4
-    { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 }, // 2x2
-    { id: '3', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }  // 2x2
+    { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 4 },
+    { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 },
+    { id: '3', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }
   ];
 
-  // Gestion multi-tiroirs
   const [drawersList, setDrawersList] = useState([
     {
       id: 'drawer-1',
@@ -293,7 +195,6 @@ export default function App() {
   ]);
   const [activeDrawerId, setActiveDrawerId] = useState('drawer-1');
 
-  // Tiroir actif
   const activeDrawer = drawersList.find(d => d.id === activeDrawerId) || drawersList[0];
 
   const drawerInputs = activeDrawer.dimensionInputs;
@@ -305,7 +206,6 @@ export default function App() {
   const layout = activeDrawer.layout;
   const customColors = activeDrawer.customColors;
 
-  // Fonctions de mise à jour pour le tiroir actif
   const updateActiveDrawer = (updater) => {
     setDrawersList(prev => prev.map(d => d.id === activeDrawerId ? updater(d) : d));
   };
@@ -456,11 +356,7 @@ export default function App() {
   };
 
   const calculateBoxCost = (box) => {
-    const { width: w, depth: d, height: h, wallThickness: t, bottomThickness: b } = box;
-    
-    // Estimation du poids et du temps basée sur vos repères exacts :
-    // - Petite boîte 120x90 : ~37g, ~0.75h (45 min)
-    // - Grande boîte 180x175 : ~81g, ~1.5h (1h30)
+    const { width: w, depth: d, height: h } = box;
     const area = w * d;
     const refSmallArea = 120 * 90;
     const ratio = area / refSmallArea;
@@ -470,14 +366,10 @@ export default function App() {
 
     const materialCost = (weightGrams / 1000) * pricingSettings.plaPricePerKg;
     const electricityCost = (pricingSettings.printerPowerW / 1000) * printTimeHours * pricingSettings.kwhPrice;
-    const amortizationCost = printTimeHours * 0.20; // 0.20€ par heure d'amortissement machine
-    
-    // Supplément grand format (> 150mm)
+    const amortizationCost = printTimeHours * 0.20;
     const largeFormatFee = (w > 150 || d > 150) ? 1.00 : 0.00;
 
     const baseCost = materialCost + electricityCost + amortizationCost + pricingSettings.laborFeePerBox + largeFormatFee;
-    
-    // Application du coefficient x2.6 demandé
     const finalPrice = baseCost * 2.6;
 
     return {
@@ -487,7 +379,6 @@ export default function App() {
     };
   };
 
-  // Calcul du prix et du nombre de boîtes pour TOUS les tiroirs
   const getAllBoxesFromDrawers = (dList) => {
     let allBoxes = [];
     dList.forEach((dItem) => {
@@ -528,7 +419,6 @@ export default function App() {
     return acc + cost.finalPrice;
   }, 0);
 
-  // Le total affiché en haut correspond UNIQUEMENT aux boîtes (hors frais de port)
   const totalPrice = boxesSubtotal;
   const shippingCost = allDrawersBoxes.length > 0 ? pricingSettings.shippingCostBE : 0;
   const totalPriceWithShipping = totalPrice + shippingCost;
@@ -554,7 +444,7 @@ export default function App() {
 
     drawersList.forEach((dItem, index) => {
       summary += `\n[TIROIR #${index + 1} : ${dItem.name}]\n`;
-      summary += `Dimensions Tiroir : ${dItem.dimensions.width} x ${dItem.dimensions.depth} x ${dItem.dimensions.height} mm\n`;
+      summary += `Dimensions Internes Tiroir : ${dItem.dimensions.width} x ${dItem.dimensions.depth} x ${dItem.dimensions.height} mm\n`;
       summary += `Jeu entre boîtes : ${dItem.clearance} mm | Jeu de hauteur : ${dItem.heightMargin} mm\n`;
       
       const drawerBoxes = allDrawersBoxes.filter(b => b.drawerId === dItem.id);
@@ -573,16 +463,13 @@ export default function App() {
   };
 
   const generateConfigLink = () => {
-    const configData = {
-      drawersList
-    };
+    const configData = { drawersList };
     const jsonStr = JSON.stringify(configData);
     const encoded = encodeURIComponent(jsonStr);
     return `${window.location.origin}${window.location.pathname}?config=${encoded}&admin=true`;
   };
 
   const downloadAllSTL = () => {
-    // Génère et télécharge chaque compartiment de TOUS les tiroirs dans un fichier .stl individuel
     let globalIndex = 0;
     drawersList.forEach((dItem) => {
       const uW = dItem.dimensions.width / gridSize.cols;
@@ -639,26 +526,6 @@ export default function App() {
         if (parsed.drawersList && parsed.drawersList.length > 0) {
           setDrawersList(parsed.drawersList);
           setActiveDrawerId(parsed.drawersList[0].id);
-        } else if (parsed.drawer) {
-          // Rétrocompatibilité avec les liens à tiroir unique
-          const singleDrawer = {
-            id: 'drawer-1',
-            name: 'Tiroir 1',
-            dimensions: parsed.drawer,
-            dimensionInputs: {
-              width: String(parsed.drawer.width),
-              depth: String(parsed.drawer.depth),
-              height: String(parsed.drawer.height)
-            },
-            heightMargin: parsed.heightMargin ?? 2,
-            heightMarginInput: String(parsed.heightMargin ?? 2),
-            clearance: parsed.clearance ?? 1,
-            clearanceInput: String(parsed.clearance ?? 1),
-            layout: parsed.layout || [],
-            customColors: parsed.customColors || {}
-          };
-          setDrawersList([singleDrawer]);
-          setActiveDrawerId('drawer-1');
         }
       } catch (err) {
         console.error("Erreur de décodage du lien de configuration :", err);
@@ -672,12 +539,19 @@ export default function App() {
       return;
     }
 
+    // Vérification de la limite max des compartiments (234x234 mm)
+    const MAX_COMPARTMENT_SIZE = 234;
+    const oversizedBox = allDrawersBoxes.find(b => b.width > MAX_COMPARTMENT_SIZE || b.depth > MAX_COMPARTMENT_SIZE);
+    if (oversizedBox) {
+      alert(`Erreur : Le compartiment #${oversizedBox.width}x${oversizedBox.height} dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm pour l'imprimante Bambu Lab P1S.`);
+      return;
+    }
+
     setIsSending(true);
 
     const shareableConfigLink = generateConfigLink();
     const cleanSummary = getOrderSummaryCleanText();
 
-    // Construction propre du tableau HTML et du texte pour les templates EmailJS
     let htmlBoxesList = `<ul style="padding-left: 15px; margin: 0; font-family: sans-serif; font-size: 13px; color: #334155;">`;
     allDrawersBoxes.forEach((b, idx) => {
       htmlBoxesList += `<li style="margin-bottom: 6px;"><strong>Compartiment #${idx + 1}</strong> (${b.drawerName}) : <b>${b.width} × ${b.depth} × ${b.height} mm</b> (Grille ${b.colSpan}×${b.rowSpan} - Couleur: ${b.color})</li>`;
@@ -685,9 +559,9 @@ export default function App() {
     htmlBoxesList += `</ul>`;
 
     let htmlDrawersList = `<ul style="padding-left: 15px; margin: 0; font-family: sans-serif; font-size: 13px; color: #334155;">`;
-    drawersList.forEach((dItem, idx) => {
+    drawersList.forEach((dItem) => {
       const count = allDrawersBoxes.filter(b => b.drawerId === dItem.id).length;
-      htmlDrawersList += `<li style="margin-bottom: 4px;"><strong>${dItem.name}</strong> : ${dItem.dimensions.width} × ${dItem.dimensions.depth} × ${dItem.dimensions.height} mm (${count} boîtes)</li>`;
+      htmlDrawersList += `<li style="margin-bottom: 4px;"><strong>${dItem.name}</strong> (Interne : ${dItem.dimensions.width} × ${dItem.dimensions.depth} × ${dItem.dimensions.height} mm) : ${count} boîtes</li>`;
     });
     htmlDrawersList += `</ul>`;
 
@@ -699,7 +573,6 @@ export default function App() {
       client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (Belgique)`,
       client_relay_point: clientInfo.relayPoint,
       client_notes: clientInfo.notes || 'Aucune note',
-      drawer_dimensions: `${drawersList.length} tiroir(s) configuré(s)`,
       box_count: allDrawersBoxes.length,
       clearance: clearance,
       height_margin: heightMargin,
@@ -885,6 +758,20 @@ export default function App() {
   const mergeSelectedArea = () => {
     const bounds = getSelectionBounds();
     if (!bounds) return;
+
+    // Vérification avant fusion de la taille du compartiment (Max 234 x 234 mm)
+    const unitWidth = drawer.width / gridSize.cols;
+    const unitDepth = drawer.depth / gridSize.rows;
+    const testRawW = bounds.colSpan * unitWidth;
+    const testRawD = bounds.rowSpan * unitDepth;
+    const testBW = Math.max(10, Math.round((testRawW - clearance) * 10) / 10);
+    const testBD = Math.max(10, Math.round((testRawD - clearance) * 10) / 10);
+
+    const MAX_COMPARTMENT_SIZE = 234;
+    if (testBW > MAX_COMPARTMENT_SIZE || testBD > MAX_COMPARTMENT_SIZE) {
+      alert(`Impossible de fusionner : ce compartiment ferait ${testBW}x${testBD} mm, ce qui dépasse la limite maximale de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm (Bambu Lab P1S).`);
+      return;
+    }
 
     const filteredLayout = layout.filter(box => {
       const boxColEnd = box.colStart + box.colSpan - 1;
@@ -1080,25 +967,6 @@ export default function App() {
       boxGroup.add(wallsMesh);
       boxGroup.add(bottomMesh);
 
-      const scale = Math.min(b.width, b.depth) < 60 ? 0.6 : 1.0;
-      const textShapes = create3DrTextShapes(scale);
-      const textMat = new THREE.MeshStandardMaterial({
-        color: new THREE.Color(b.color).clone().multiplyScalar(0.75),
-        roughness: 0.5,
-        side: THREE.DoubleSide
-      });
-
-      textShapes.forEach(shape => {
-        const textGeo = new THREE.ExtrudeGeometry(shape, {
-          depth: 0.8,
-          bevelEnabled: false
-        });
-        textGeo.rotateX(-Math.PI / 2);
-        const textMesh = new THREE.Mesh(textGeo, textMat);
-        textMesh.position.set(b.width / 2, 0, b.depth / 2);
-        boxGroup.add(textMesh);
-      });
-
       boxGroup.position.set(b.x, 0, b.y);
 
       if (isSelected) {
@@ -1122,7 +990,6 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
-      {/* BANNIÈRE ADMIN SI OUVERT DEPUIS L'E-MAIL DE COMMANDE */}
       {isAdminMode && (
         <div className="bg-amber-500 text-slate-900 px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 shadow-md">
           <div className="flex items-center gap-2">
@@ -1139,7 +1006,6 @@ export default function App() {
         </div>
       )}
 
-      {/* HEADER TOP BAR */}
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
@@ -1172,7 +1038,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* BARRE DE SÉLECTION / AJOUT DE TIROIRS */}
       <div className="bg-slate-800 text-white px-3 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-inner">
         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Mes Tiroirs :</span>
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
@@ -1210,7 +1075,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* MOBILE TABS */}
       <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0 z-20">
         <button
           onClick={() => setMobileTab('2d')}
@@ -1232,7 +1096,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* ORDER MODAL */}
       {showShareModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
@@ -1361,7 +1224,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MAIN VIEW CONTENT AREA */}
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           <div className="p-4 border-b border-slate-100 space-y-3">
@@ -1372,6 +1234,11 @@ export default function App() {
               </h2>
             </div>
             
+            {/* Mention demandée sous dimensions */}
+            <p className="text-[10px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
+              Ce sont les dimensions internes précises du tiroir.
+            </p>
+
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Largeur</label>
@@ -1403,7 +1270,6 @@ export default function App() {
             </div>
 
             <div className="pt-2 border-t border-slate-100 space-y-2">
-              {/* CHAMP JEU ENTRE BOÎTES */}
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
@@ -1426,7 +1292,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* CHAMP JEU DE HAUTEUR */}
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
@@ -1503,7 +1368,7 @@ export default function App() {
 
             <p className="text-[10px] text-slate-500 mb-2 flex items-center gap-1">
               <MousePointerClick className="w-3 h-3 text-indigo-500" />
-              <span>Faites glisser votre doigt ou tapez 2 cases pour fusionner.</span>
+              <span>Faites glisser votre doigt ou tapez 2 cases pour fusionner (Max compartiment : 234×234 mm).</span>
             </p>
 
             <div 
