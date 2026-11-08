@@ -27,25 +27,37 @@ import {
   MessageSquare
 } from 'lucide-react';
 
+const standardColors = [
+  { name: 'Bleu', hex: '#2563eb', disabled: true },
+  { name: 'Rouge', hex: '#dc2626', disabled: false },
+  { name: 'Gold', hex: '#FFD700', disabled: false },
+  { name: 'Orange', hex: '#f97316', disabled: false },
+  { name: 'Vert', hex: '#10b981', disabled: true },
+  { name: 'Blanc', hex: '#f8fafc', disabled: false },
+  { name: 'Noir', hex: '#0f172a', disabled: true },
+  { name: 'Gris', hex: '#64748b', disabled: true }
+];
+
 const getDimensionColor = (colSpan, rowSpan) => {
+  // Utilise les couleurs valides de la palette (ex: Rouge ou Gold ou Blanc par défaut selon dimensions)
   const key = `${colSpan}x${rowSpan}`;
   const colorMap = {
     '1x1': '#2563eb',
     '1x2': '#10b981',
     '2x1': '#f97316',
     '2x2': '#FFD700', // Gold
-    '1x3': '#ec4899',
-    '3x1': '#06b6d4',
-    '2x3': '#059669',
-    '3x2': '#14b8a6',
-    '3x3': '#6366f1',
-    '4x1': '#84cc16',
-    '1x4': '#d946ef',
-    '4x2': '#dc2626',
-    '2x4': '#9333ea',
-    '4x4': '#0284c7'
+    '1x3': '#dc2626',
+    '3x1': '#f8fafc',
+    '2x3': '#10b981',
+    '3x2': '#dc2626',
+    '3x3': '#f97316',
+    '4x1': '#FFD700',
+    '1x4': '#dc2626',
+    '4x2': '#f97316',
+    '2x4': '#2563eb',
+    '4x4': '#FFD700'
   };
-  return colorMap[key] || '#64748b';
+  return colorMap[key] || '#f8fafc';
 };
 
 const generateBoxSTL = (box) => {
@@ -261,7 +273,6 @@ export default function App() {
     const newId = `drawer-${Date.now()}`;
     const newDrawerNum = drawersList.length + 1;
     
-    // Réutilise les dimensions fournies dans le tiroir 1 par défaut
     const refDrawer = drawersList[0].dimensions;
 
     const newDrawerItem = {
@@ -327,17 +338,6 @@ export default function App() {
     postalCode: '',
     notes: ''
   });
-
-  const standardColors = [
-    { name: 'Bleu', hex: '#2563eb', disabled: true },
-    { name: 'Rouge', hex: '#dc2626', disabled: false },
-    { name: 'Gold', hex: '#FFD700', disabled: false },
-    { name: 'Orange', hex: '#f97316', disabled: false },
-    { name: 'Vert', hex: '#10b981', disabled: true },
-    { name: 'Blanc', hex: '#f8fafc', disabled: false },
-    { name: 'Noir', hex: '#0f172a', disabled: true },
-    { name: 'Gris', hex: '#64748b', disabled: true }
-  ];
 
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -1013,31 +1013,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Barre des 4 étapes numérotées bien en évidence */}
-      <div className="bg-indigo-900 text-white px-4 py-2.5 flex items-center justify-between shrink-0 shadow-md">
-        <div className="flex items-center space-x-1 sm:space-x-4 w-full justify-around text-center text-xs font-black">
-          <div className="flex items-center gap-1 bg-indigo-800 px-2.5 py-1 rounded-lg border border-indigo-700">
-            <span className="bg-amber-400 text-indigo-950 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shadow-xs">1</span>
-            <span className="hidden sm:inline">Choisir dimensions</span>
-          </div>
-          <span className="text-indigo-400">➔</span>
-          <div className="flex items-center gap-1 bg-indigo-800 px-2.5 py-1 rounded-lg border border-indigo-700">
-            <span className="bg-amber-400 text-indigo-950 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shadow-xs">2</span>
-            <span className="hidden sm:inline">Créer compartiments</span>
-          </div>
-          <span className="text-indigo-400">➔</span>
-          <div className="flex items-center gap-1 bg-indigo-800 px-2.5 py-1 rounded-lg border border-indigo-700">
-            <span className="bg-amber-400 text-indigo-950 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shadow-xs">3</span>
-            <span className="hidden sm:inline">Aperçu 3D</span>
-          </div>
-          <span className="text-indigo-400">➔</span>
-          <div className="flex items-center gap-1 bg-indigo-800 px-2.5 py-1 rounded-lg border border-indigo-700">
-            <span className="bg-amber-400 text-indigo-950 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black shadow-xs">4</span>
-            <span className="hidden sm:inline">Payer / Commander</span>
-          </div>
-        </div>
-      </div>
-
       <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
@@ -1055,7 +1030,7 @@ export default function App() {
             className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer min-h-[38px]"
           >
             <Send className="w-4 h-4" />
-            <span>Passer Commande (Étape 4)</span>
+            <span>Passer Commande</span>
           </button>
 
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 sm:px-4 py-1 flex items-center gap-2 min-h-[38px]">
@@ -1120,13 +1095,13 @@ export default function App() {
           onClick={() => setMobileTab('2d')}
           className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === '2d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
         >
-          <Grid className="w-4 h-4" /> 2. Plan 2D
+          <Grid className="w-4 h-4" /> Plan 2D
         </button>
         <button
           onClick={() => setMobileTab('3d')}
           className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === '3d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
         >
-          <Eye className="w-4 h-4" /> 3. Vue 3D
+          <Eye className="w-4 h-4" /> Vue 3D
         </button>
         <button
           onClick={() => setMobileTab('list')}
@@ -1142,7 +1117,7 @@ export default function App() {
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
               <div className="flex items-center gap-2">
                 <ShoppingBag className="w-4 h-4 text-indigo-600" />
-                <h3 className="text-sm font-bold text-slate-800">Étape 4 : Passer Commande ({drawersList.length} tiroir(s))</h3>
+                <h3 className="text-sm font-bold text-slate-800">Passer Commande ({drawersList.length} tiroir(s))</h3>
               </div>
               <button 
                 onClick={() => setShowShareModal(false)}
@@ -1280,24 +1255,22 @@ export default function App() {
 
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
-          
-          {/* Étape 1 : Dimensions */}
           <div className="p-4 border-b border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-2">
-                <span className="bg-indigo-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px]">1</span>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
                 Dimensions ({activeDrawer.name})
               </h2>
             </div>
             
-            <p className="text-[10px] text-indigo-900 font-semibold bg-indigo-50 p-2 rounded-lg border border-indigo-200">
-              Indiquez ci-dessous les dimensions internes exactes de votre tiroir.
+            <p className="text-[10px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
+              Ce sont les dimensions internes précises du tiroir.
             </p>
 
+            {/* Inversion des champs Longueur et Largeur selon votre demande */}
             <div className="grid grid-cols-3 gap-2">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Largeur</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Longueur</label>
                 <input
                   type="number"
                   value={drawerInputs.width}
@@ -1306,7 +1279,7 @@ export default function App() {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Longueur</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Largeur</label>
                 <input
                   type="number"
                   value={drawerInputs.depth}
@@ -1397,13 +1370,11 @@ export default function App() {
             </div>
           </div>
 
-          {/* Étape 2 : Créer ses compartiments (2D) */}
           <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-2">
-                <span className="bg-indigo-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px]">2</span>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Grid className="w-3.5 h-3.5 text-indigo-600" />
-                Créer compartiments ({activeDrawer.name})
+                Plan 2D ({activeDrawer.name})
               </h2>
               <div className="flex items-center gap-1">
                 <button
@@ -1424,10 +1395,10 @@ export default function App() {
               </div>
             </div>
 
-            {/* Instruction en couleur contrastée sans "tapez 2 case" */}
-            <p className="text-[11px] text-amber-900 bg-amber-50 border border-amber-300 font-bold p-2.5 rounded-lg mb-2 flex items-center gap-1.5">
-              <MousePointerClick className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Faites glisser votre curseur pour dessiner et fusionner vos compartiments (Max : 240×240 mm).</span>
+            {/* Template bleuté appliqué pour l'aide du point 2 */}
+            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2.5 rounded-lg mb-2 flex items-center gap-1.5">
+              <MousePointerClick className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>Faites glisser votre curseur pour fusionner (Max compartiment : 240×240 mm).</span>
             </p>
 
             <div 
@@ -1457,7 +1428,7 @@ export default function App() {
                         backgroundColor: color
                       }}
                     >
-                      <span className="text-white text-[11px] font-extrabold shadow-sm bg-black/20 px-1.5 py-0.5 rounded">
+                      <span className="text-slate-900 text-[11px] font-extrabold shadow-sm bg-white/70 px-1.5 py-0.5 rounded">
                         {b.colSpan}×{b.rowSpan}
                       </span>
                     </div>
@@ -1509,19 +1480,17 @@ export default function App() {
             )}
           </div>
 
-          {/* Étape 3 : Aperçu des compartiments & couleurs */}
           <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-indigo-700 flex items-center gap-2">
-                <span className="bg-indigo-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px]">3</span>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                Aperçu des compartiments ({boxes.length})
+                Boîtes du tiroir ({boxes.length})
               </h2>
             </div>
 
-            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 p-2 rounded-lg mb-2 flex items-center gap-1.5 font-bold">
-              <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Cliquez sur le rond de couleur pour personnaliser chaque compartiment.</span>
+            <p className="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-100 p-2 rounded-lg mb-2 flex items-center gap-1.5 font-medium">
+              <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+              <span>Vous pouvez sélectionner la couleur en cliquant sur le rond de couleur.</span>
             </p>
 
             <div className="space-y-2">
@@ -1599,8 +1568,7 @@ export default function App() {
         <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[350px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
-          <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur border border-indigo-200 p-2.5 rounded-xl text-[10px] text-indigo-900 font-bold shadow-md flex items-center gap-2 pointer-events-none z-10">
-            <span className="bg-indigo-600 text-white w-4 h-4 rounded-full flex items-center justify-center text-[10px]">3</span>
+          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-2.5 rounded-xl text-[10px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none z-10">
             <Eye className="w-4 h-4 text-indigo-600" />
             <span>Vue 3D ({activeDrawer.name})</span>
           </div>
