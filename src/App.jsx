@@ -39,7 +39,6 @@ const standardColors = [
 ];
 
 const getDimensionColor = (colSpan, rowSpan) => {
-  // Utilise les couleurs valides de la palette (ex: Rouge ou Gold ou Blanc par défaut selon dimensions)
   const key = `${colSpan}x${rowSpan}`;
   const colorMap = {
     '1x1': '#2563eb',
@@ -1029,6 +1028,7 @@ export default function App() {
             onClick={() => setShowShareModal(true)}
             className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer min-h-[38px]"
           >
+            <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-[11px] shrink-0">4</span>
             <Send className="w-4 h-4" />
             <span>Passer Commande</span>
           </button>
@@ -1255,19 +1255,23 @@ export default function App() {
 
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
+          
+          {/* Section 1 : Dimensions */}
           <div className="p-4 border-b border-slate-100 space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-sm">1</span>
                 <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
                 Dimensions ({activeDrawer.name})
               </h2>
             </div>
             
-            <p className="text-[10px] text-slate-500 italic bg-slate-50 p-2 rounded-lg border border-slate-200">
-              Ce sont les dimensions internes précises du tiroir.
+            {/* Même template bleuté que pour les blocs 2 et 3 */}
+            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2.5 rounded-lg flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>Ce sont les dimensions internes précises du tiroir.</span>
             </p>
 
-            {/* Inversion des champs Longueur et Largeur selon votre demande */}
             <div className="grid grid-cols-3 gap-2">
               <div>
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Longueur</label>
@@ -1370,9 +1374,11 @@ export default function App() {
             </div>
           </div>
 
+          {/* Section 2 : Plan 2D */}
           <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-sm">2</span>
                 <Grid className="w-3.5 h-3.5 text-indigo-600" />
                 Plan 2D ({activeDrawer.name})
               </h2>
@@ -1395,7 +1401,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* Template bleuté appliqué pour l'aide du point 2 */}
             <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2.5 rounded-lg mb-2 flex items-center gap-1.5">
               <MousePointerClick className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
               <span>Faites glisser votre curseur pour fusionner (Max compartiment : 240×240 mm).</span>
@@ -1480,16 +1485,18 @@ export default function App() {
             )}
           </div>
 
+          {/* Section 3 : Boîtes */}
           <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
+                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-sm">3</span>
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
                 Boîtes du tiroir ({boxes.length})
               </h2>
             </div>
 
-            <p className="text-[10px] text-indigo-600 bg-indigo-50 border border-indigo-100 p-2 rounded-lg mb-2 flex items-center gap-1.5 font-medium">
-              <Info className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2 flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
               <span>Vous pouvez sélectionner la couleur en cliquant sur le rond de couleur.</span>
             </p>
 
