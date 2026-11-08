@@ -24,7 +24,8 @@ import {
   Info,
   Loader2,
   Sliders,
-  MessageSquare
+  MessageSquare,
+  Globe
 } from 'lucide-react';
 
 const standardColors = [
@@ -44,7 +45,7 @@ const getDimensionColor = (colSpan, rowSpan) => {
     '1x1': '#2563eb',
     '1x2': '#10b981',
     '2x1': '#f97316',
-    '2x2': '#FFD700', // Gold
+    '2x2': '#FFD700',
     '1x3': '#dc2626',
     '3x1': '#f8fafc',
     '2x3': '#10b981',
@@ -324,10 +325,12 @@ export default function App() {
     printerPowerW: 150,
     laborFeePerBox: 0.10,
     marginPercent: 300,
-    shippingCostBE: 4.30
+    shippingCostBE: 4.30,
+    shippingCostFR: 5.50
   });
 
   const [clientInfo, setClientInfo] = useState({
+    country: 'BE', // 'BE' ou 'FR'
     name: '',
     email: '',
     phone: '',
@@ -426,25 +429,29 @@ export default function App() {
   }, 0);
 
   const totalPrice = boxesSubtotal;
-  const shippingCost = allDrawersBoxes.length > 0 ? pricingSettings.shippingCostBE : 0;
+  const shippingCost = allDrawersBoxes.length > 0 
+    ? (clientInfo.country === 'FR' ? pricingSettings.shippingCostFR : pricingSettings.shippingCostBE) 
+    : 0;
   const totalPriceWithShipping = totalPrice + shippingCost;
 
   const getOrderSummaryCleanText = () => {
+    const countryLabel = clientInfo.country === 'FR' ? 'France' : 'Belgique';
     let summary = `=== DEMANDE DE DEVIS / COMMANDE 3Dr ===\n\n`;
-    summary += `--- COORDONNÉES CLIENT (BELGIQUE) ---\n`;
+    summary += `--- COORDONNÉES CLIENT (${countryLabel.toUpperCase()}) ---\n`;
+    summary += `Pays : ${countryLabel}\n`;
     if (clientInfo.name) summary += `Nom : ${clientInfo.name}\n`;
     if (clientInfo.email) summary += `Email : ${clientInfo.email}\n`;
     if (clientInfo.phone) summary += `Téléphone : ${clientInfo.phone}\n`;
     if (clientInfo.address) summary += `Adresse postale : ${clientInfo.address}\n`;
     if (clientInfo.relayPoint) summary += `Point Mondial Relay : ${clientInfo.relayPoint}\n`;
-    if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city} (Belgique)\n`;
+    if (clientInfo.postalCode || clientInfo.city) summary += `Ville / CP : ${clientInfo.postalCode} ${clientInfo.city}\n`;
     if (clientInfo.notes) summary += `Notes : ${clientInfo.notes}\n\n`;
 
     summary += `--- INFORMATIONS TECHNIQUES & TARIFS ESTIMÉS ---\n`;
     summary += `Nombre de tiroirs configurés : ${drawersList.length}\n`;
     summary += `Nombre total de compartiments : ${allDrawersBoxes.length}\n`;
     summary += `Sous-total boîtes : ${boxesSubtotal.toFixed(2)} €\n`;
-    summary += `Livraison Mondial Relay (Belgique uniquement) : ${shippingCost.toFixed(2)} €\n`;
+    summary += `Livraison Mondial Relay (${countryLabel}) : ${shippingCost.toFixed(2)} €\n`;
     summary += `PRIX TOTAL ESTIMÉ (avec port) : ${totalPriceWithShipping.toFixed(2)} €\n\n`;
     summary += `--- DÉTAIL DES TIROIRS ET COMPARTIMENTS ---\n`;
 
@@ -555,6 +562,7 @@ export default function App() {
 
     const shareableConfigLink = generateConfigLink();
     const cleanSummary = getOrderSummaryCleanText();
+    const countryLabel = clientInfo.country === 'FR' ? 'France' : 'Belgique';
 
     let htmlBoxesList = `<ul style="padding-left: 15px; margin: 0; font-family: sans-serif; font-size: 13px; color: #334155;">`;
     allDrawersBoxes.forEach((b, idx) => {
@@ -574,7 +582,7 @@ export default function App() {
       client_name: clientInfo.name,
       client_email: clientInfo.email,
       client_phone: clientInfo.phone || 'Non renseigné',
-      client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (Belgique)`,
+      client_address: `${clientInfo.address}, ${clientInfo.postalCode} ${clientInfo.city} (${countryLabel})`,
       client_relay_point: clientInfo.relayPoint,
       client_notes: clientInfo.notes || 'Aucune note',
       box_count: allDrawersBoxes.length,
@@ -1131,9 +1139,25 @@ export default function App() {
               <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-slate-800 flex items-center gap-1.5">
-                    <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Coordonnées de Livraison (Belgique)
+                    <Smartphone className="w-3.5 h-3.5 text-indigo-600" /> Coordonnées de Livraison
                   </h4>
                 </div>
+
+                {/* Champ Liste de choix de Pays au tout début */}
+                <div>
+                  <label className="block text-[10px] font-bold text-indigo-700 uppercase mb-1 flex items-center gap-1">
+                    <Globe className="w-3.5 h-3.5 text-indigo-600" /> Pays de livraison *
+                  </label>
+                  <select
+                    value={clientInfo.country}
+                    onChange={(e) => setClientInfo({ ...clientInfo, country: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-indigo-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs font-bold text-slate-800 shadow-xs cursor-pointer"
+                  >
+                    <option value="BE">Belgique (Frais de port Mondial Relay : 4.30 €)</option>
+                    <option value="FR">France (Frais de port Mondial Relay : 5.50 €)</option>
+                  </select>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input
                     type="text"
@@ -1150,6 +1174,7 @@ export default function App() {
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                   />
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <input
                     type="tel"
@@ -1160,19 +1185,20 @@ export default function App() {
                   />
                   <input
                     type="text"
-                    placeholder="Code Postal (BE) *"
+                    placeholder="Code Postal *"
                     value={clientInfo.postalCode}
                     onChange={(e) => setClientInfo({ ...clientInfo, postalCode: e.target.value })}
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                   />
                   <input
                     type="text"
-                    placeholder="Ville (Belgique) *"
+                    placeholder="Ville *"
                     value={clientInfo.city}
                     onChange={(e) => setClientInfo({ ...clientInfo, city: e.target.value })}
                     className="px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                   />
                 </div>
+
                 <input
                   type="text"
                   placeholder="Adresse postale *"
@@ -1180,13 +1206,20 @@ export default function App() {
                   onChange={(e) => setClientInfo({ ...clientInfo, address: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
                 />
-                <input
-                  type="text"
-                  placeholder="Point Mondial Relay souhaité *"
-                  value={clientInfo.relayPoint}
-                  onChange={(e) => setClientInfo({ ...clientInfo, relayPoint: e.target.value })}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
-                />
+
+                <div>
+                  <input
+                    type="text"
+                    placeholder="Point Mondial Relay souhaité *"
+                    value={clientInfo.relayPoint}
+                    onChange={(e) => setClientInfo({ ...clientInfo, relayPoint: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs"
+                  />
+                  <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-200 font-bold p-1.5 rounded-md mt-1 flex items-center gap-1">
+                    <Info className="w-3 h-3 text-amber-600 shrink-0" />
+                    Uniquement livraison en point relais, Mondial Relay.
+                  </p>
+                </div>
                 
                 {/* Champ Note client avec l'exemple demandé */}
                 <div>
@@ -1214,7 +1247,7 @@ export default function App() {
                   <div className="flex justify-between items-center text-slate-700 font-semibold">
                     <span className="flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span> 
-                      Livraison Mondial Relay (Uniquement Belgique) :
+                      Livraison Mondial Relay ({clientInfo.country === 'FR' ? 'France' : 'Belgique'}) :
                     </span>
                     <span>{shippingCost.toFixed(2)} €</span>
                   </div>
