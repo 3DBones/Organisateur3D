@@ -1235,6 +1235,14 @@ export default function App() {
                   />
                 </div>
 
+                {/* Note d'information sur la procédure de paiement */}
+                <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] font-semibold flex items-start gap-2">
+                  <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Information :</strong> Une fois le devis envoyé, il sera analysé et un e-mail vous sera envoyé pour la demande de paiement sécurisé.
+                  </span>
+                </div>
+
                 <div className="p-2.5 bg-indigo-50/70 border border-indigo-200 rounded-xl space-y-1 mt-2">
                   <div className="flex justify-between items-center text-slate-700 font-semibold">
                     <span>Nombre de tiroirs :</span>
