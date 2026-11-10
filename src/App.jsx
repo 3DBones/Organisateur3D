@@ -1472,6 +1472,11 @@ export default function App() {
               </div>
             </div>
 
+            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2.5 flex items-center gap-1.5 leading-tight">
+              <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>Glissez pour fusionner les cases et créer un compartiment.</span>
+            </p>
+
             <div 
               ref={gridContainerRef}
               onTouchMove={handleTouchMove}
