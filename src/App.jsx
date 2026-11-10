@@ -36,7 +36,7 @@ const standardColors = [
   { name: 'Orange', hex: '#f97316', disabled: false },
   { name: 'Vert', hex: '#10b981', disabled: true },
   { name: 'Blanc', hex: '#e2e8f0', disabled: false },
-  { name: 'Noir', hex: '#0f172a', disabled: true },
+  { name: 'Noir', hex: '#0f172a', disabled: false },
   { name: 'Gris', hex: '#64748b', disabled: true }
 ];
 
