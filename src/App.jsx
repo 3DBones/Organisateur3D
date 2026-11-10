@@ -35,7 +35,7 @@ const standardColors = [
   { name: 'Gold', hex: '#FFD700', disabled: false },
   { name: 'Orange', hex: '#f97316', disabled: false },
   { name: 'Vert', hex: '#10b981', disabled: true },
-  { name: 'Blanc', hex: '#f8fafc', disabled: false },
+  { name: 'Blanc', hex: '#e2e8f0', disabled: false },
   { name: 'Noir', hex: '#0f172a', disabled: true },
   { name: 'Gris', hex: '#64748b', disabled: true }
 ];
@@ -48,7 +48,7 @@ const getDimensionColor = (colSpan, rowSpan) => {
     '2x1': '#f97316',
     '2x2': '#FFD700',
     '1x3': '#dc2626',
-    '3x1': '#f8fafc',
+    '3x1': '#e2e8f0',
     '2x3': '#10b981',
     '3x2': '#dc2626',
     '3x3': '#f97316',
@@ -58,7 +58,7 @@ const getDimensionColor = (colSpan, rowSpan) => {
     '2x4': '#2563eb',
     '4x4': '#FFD700'
   };
-  return colorMap[key] || '#f8fafc';
+  return colorMap[key] || '#e2e8f0';
 };
 
 const generateBoxSTL = (box) => {
@@ -1474,7 +1474,7 @@ export default function App() {
 
             <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2.5 flex items-center gap-1.5 leading-tight">
               <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Glissez pour fusionner les cases et créer un compartiment.</span>
+              <span>Faites glisser votre curseur pour fusionner les cases et créer un compartiment.</span>
             </p>
 
             <div 
@@ -1491,11 +1491,14 @@ export default function App() {
                   const widthPercent = (b.colSpan / gridSize.cols) * 100;
                   const heightPercent = (b.rowSpan / gridSize.rows) * 100;
                   const color = customColors[b.id] || getDimensionColor(b.colSpan, b.rowSpan);
+                  const isLightColor = color === '#e2e8f0' || color === '#FFD700';
 
                   return (
                     <div
                       key={b.id}
-                      className="absolute border-2 border-white/80 rounded-lg flex items-center justify-center transition-all shadow-xs"
+                      className={`absolute rounded-lg flex items-center justify-center transition-all shadow-xs ${
+                        isLightColor ? 'border-2 border-slate-400' : 'border-2 border-white/80'
+                      }`}
                       style={{
                         left: `${leftPercent}%`,
                         top: `${topPercent}%`,
@@ -1504,7 +1507,9 @@ export default function App() {
                         backgroundColor: color
                       }}
                     >
-                      <span className="text-slate-900 text-[11px] font-extrabold shadow-xs bg-white/80 px-1 py-0.5 rounded">
+                      <span className={`text-[11px] font-extrabold shadow-xs px-1.5 py-0.5 rounded ${
+                        isLightColor ? 'text-slate-900 bg-slate-900/10 backdrop-blur-xs' : 'text-slate-900 bg-white/85'
+                      }`}>
                         {b.colSpan}×{b.rowSpan}
                       </span>
                     </div>
@@ -1580,7 +1585,7 @@ export default function App() {
                   {Object.values(groupedBoxes).map((group) => (
                     <div key={group.key} className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getDimensionColor(group.colSpan, group.rowSpan) }} />
+                        <span className="w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: getDimensionColor(group.colSpan, group.rowSpan) }} />
                         <span className="font-bold text-slate-800">{group.items.length}x Boîte {group.colSpan}×{group.rowSpan}</span>
                       </div>
                       <span className="text-[10px] font-mono text-slate-500">
@@ -1602,7 +1607,7 @@ export default function App() {
                         <button
                           key={c.name}
                           onClick={() => setCustomColors(prev => ({ ...prev, [box.id]: c.hex }))}
-                          className={`w-5 h-5 rounded-full border transition ${box.color === c.hex ? 'ring-2 ring-indigo-500 scale-110' : 'border-slate-300 opacity-80'}`}
+                          className={`w-5 h-5 rounded-full border transition ${box.color === c.hex ? 'ring-2 ring-indigo-500 scale-110 border-white' : 'border-slate-300 opacity-80'}`}
                           style={{ backgroundColor: c.hex }}
                           title={c.name}
                         />
