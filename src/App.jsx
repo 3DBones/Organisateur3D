@@ -25,7 +25,8 @@ import {
   Loader2,
   Sliders,
   MessageSquare,
-  Globe
+  Globe,
+  Plus
 } from 'lucide-react';
 
 const standardColors = [
@@ -313,6 +314,7 @@ export default function App() {
   const [activeColorPickerId, setActiveColorPickerId] = useState(null);
 
   const [mobileTab, setMobileTab] = useState('2d');
+  const [showTip, setShowTip] = useState(false);
 
   const [boxSettings] = useState({
     wallThickness: 1.2,
@@ -330,7 +332,7 @@ export default function App() {
   });
 
   const [clientInfo, setClientInfo] = useState({
-    country: 'BE', // 'BE' ou 'FR'
+    country: 'BE',
     name: '',
     email: '',
     phone: '',
@@ -941,7 +943,7 @@ export default function App() {
         innerShapePath.quadraticCurveTo(wallT + inW, wallT, wallT + inW, wallT + inR);
         innerShapePath.lineTo(wallT + inW, wallT + inD - inR);
         innerShapePath.quadraticCurveTo(wallT + inW, wallT + inD, wallT + inW - inR, wallT + inD);
-        innerShapePath.lineTo(wallT + inR, wallT + inD);
+        innerShapePath.lineTo(wallT + inR, wallT);
         innerShapePath.quadraticCurveTo(wallT, wallT + inD, wallT, wallT + inD - inR);
         innerShapePath.lineTo(wallT, wallT + inR);
         innerShapePath.quadraticCurveTo(wallT, wallT, wallT + inR, wallT);
@@ -1002,81 +1004,106 @@ export default function App() {
 
   const selectionBounds = getSelectionBounds();
 
+  // Grouped boxes for simplified summary tab on mobile
+  const groupedBoxes = boxes.reduce((acc, box) => {
+    const key = `${box.colSpan}x${box.rowSpan}`;
+    if (!acc[key]) {
+      acc[key] = {
+        key,
+        colSpan: box.colSpan,
+        rowSpan: box.rowSpan,
+        width: box.width,
+        depth: box.depth,
+        height: box.height,
+        items: []
+      };
+    }
+    acc[key].items.push(box);
+    return acc;
+  }, {});
+
   return (
-    <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden" onMouseUp={handleMouseUp}>
+    <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden pb-14 md:pb-0" onMouseUp={handleMouseUp}>
       {isAdminMode && (
-        <div className="bg-amber-500 text-slate-900 px-4 py-2 flex items-center justify-between text-xs font-bold shrink-0 shadow-md">
-          <div className="flex items-center gap-2">
-            <Lock className="w-4 h-4" />
-            <span>Mode Administration 3Dr ({drawersList.length} tiroir(s) - {allDrawersBoxes.length} boîte(s))</span>
+        <div className="bg-amber-500 text-slate-900 px-3 py-1.5 flex items-center justify-between text-xs font-bold shrink-0 shadow-md z-30">
+          <div className="flex items-center gap-1.5 truncate">
+            <Lock className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Admin ({drawersList.length} tiroir(s) - {allDrawersBoxes.length} boîte(s))</span>
           </div>
           <button
             onClick={downloadAllSTL}
-            className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-[11px] font-extrabold transition flex items-center gap-1 shrink-0 cursor-pointer"
           >
-            <ArrowDown className="w-4 h-4" />
-            Télécharger les STL à imprimer ({allDrawersBoxes.length})
+            <ArrowDown className="w-3.5 h-3.5" />
+            STL ({allDrawersBoxes.length})
           </button>
         </div>
       )}
 
-      <header className="bg-white border-b border-slate-200 px-3 sm:px-6 py-2.5 flex items-center justify-between z-10 shadow-xs shrink-0">
-        <div className="flex items-center space-x-2 sm:space-x-3">
+      {/* HEADER DESKTOP SEULEMENT */}
+      <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-2.5 items-center justify-between z-10 shadow-xs shrink-0">
+        <div className="flex items-center space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
             <Box className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">Organisateur Tiroir 3Dr</h1>
-            <p className="hidden sm:block text-xs text-slate-500">Sur-Mesure & Impression 3D</p>
+            <h1 className="text-base font-bold text-slate-900 leading-tight">Organisateur Tiroir 3Dr</h1>
+            <p className="text-xs text-slate-500">Sur-Mesure & Impression 3D</p>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-3">
+        <div className="flex items-center space-x-3">
           <button
             onClick={() => setShowShareModal(true)}
-            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer min-h-[38px]"
+            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer min-h-[38px]"
           >
             <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-[11px] shrink-0">4</span>
             <Send className="w-4 h-4" />
             <span>Passer Commande</span>
           </button>
 
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-2.5 sm:px-4 py-1 flex items-center gap-2 min-h-[38px]">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-1 flex items-center gap-2 min-h-[38px]">
             <div className="p-1 bg-emerald-500 rounded-lg text-white">
-              <Euro className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <Euro className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[8px] sm:text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Total Boîtes ({allDrawersBoxes.length})</span>
-              <span className="text-xs sm:text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
+              <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider block leading-tight">Total Boîtes ({allDrawersBoxes.length})</span>
+              <span className="text-sm font-black text-emerald-700 leading-none">{totalPrice.toFixed(2)} €</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Rappel bien visible qu'il y a un onglet en haut pour ajouter un tiroir */}
-      <div className="bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-1.5 text-xs font-bold flex items-center justify-between shrink-0 shadow-inner">
+      {/* BANDEAU ASTUCE - DESKTOP SEULEMENT */}
+      <div className="hidden md:flex bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-1.5 text-xs font-bold items-center justify-between shrink-0 shadow-inner">
         <div className="flex items-center gap-2">
           <Info className="w-4 h-4 text-amber-700 shrink-0" />
           <span>Astuce : Utilisez l'onglet ci-dessous pour basculer ou ajouter un nouveau tiroir à tout moment !</span>
         </div>
       </div>
 
-      <div className="bg-slate-800 text-white px-3 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto shrink-0 shadow-inner">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Mes Tiroirs :</span>
-        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+      {/* BANDEAU BLEU MES TIROIRS - DIRECTEMENT EN HAUT SUR MOBILE */}
+      <div className="bg-slate-800 text-white px-2.5 sm:px-6 py-1.5 sm:py-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto shrink-0 shadow-md z-20">
+        <div className="flex items-center gap-1 md:hidden shrink-0 pr-1 border-r border-slate-700">
+          <Box className="w-4 h-4 text-indigo-400" />
+          <span className="text-[11px] font-black tracking-tight text-indigo-200">3Dr</span>
+        </div>
+        <span className="hidden md:inline text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Mes Tiroirs :</span>
+        
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-none flex-1">
           {drawersList.map((dItem) => {
             const isActive = dItem.id === activeDrawerId;
             return (
               <div
                 key={dItem.id}
                 onClick={() => setActiveDrawerId(dItem.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   isActive
-                    ? 'bg-indigo-600 text-white shadow-sm'
+                    ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
                     : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
                 }`}
               >
-                <span>{dItem.name}</span>
+                <span className="truncate max-w-[90px] sm:max-w-none">{dItem.name}</span>
                 {drawersList.length > 1 && (
                   <button
                     onClick={(e) => removeDrawer(dItem.id, e)}
@@ -1090,32 +1117,62 @@ export default function App() {
             );
           })}
         </div>
+        
         <button
           onClick={addNewDrawer}
-          className="ml-auto px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 cursor-pointer shadow-sm"
+          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1 shrink-0 cursor-pointer shadow-xs"
+          title="Ajouter un tiroir"
         >
-          <span>+ Ajouter un tiroir</span>
+          <Plus className="w-3.5 h-3.5 md:hidden" />
+          <span className="hidden md:inline">+ Ajouter un tiroir</span>
+          <span className="md:hidden text-[11px]">Tiroir</span>
+        </button>
+
+        {/* Bouton Info Astuce très discret sur Mobile */}
+        <button 
+          onClick={() => setShowTip(!showTip)} 
+          className="md:hidden p-1 text-slate-300 hover:text-amber-300 transition shrink-0"
+          title="Astuces"
+        >
+          <Info className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="md:hidden bg-slate-200 p-1 flex justify-around border-b border-slate-300 text-xs font-bold shrink-0 z-20">
+      {/* TIP DROPDOWN POPUP SUR MOBILE (quand on clique sur l'icône info) */}
+      {showTip && (
+        <div className="md:hidden bg-amber-50 border-b border-amber-200 text-amber-900 p-2.5 text-xs font-medium flex items-start gap-2 shrink-0 animate-in fade-in duration-200">
+          <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 text-[11px] leading-tight">
+            <strong>Astuce :</strong> Basculez entre vos tiroirs en haut, glissez sur la grille 2D pour fusionner vos compartiments.
+          </div>
+          <button onClick={() => setShowTip(false)} className="text-amber-700 p-0.5">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* NOUVELLE BARRE DE NAVIGATION EN ONGLETS MOBILE */}
+      <div className="md:hidden bg-white p-1 flex justify-around border-b border-slate-200 text-xs font-bold shrink-0 z-10 shadow-xs">
         <button
           onClick={() => setMobileTab('2d')}
-          className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === '2d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 transition ${mobileTab === '2d' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600'}`}
         >
-          <Grid className="w-4 h-4" /> Plan 2D
+          <Grid className="w-3.5 h-3.5" />
+          <span>Plan 2D</span>
         </button>
         <button
           onClick={() => setMobileTab('3d')}
-          className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === '3d' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 transition ${mobileTab === '3d' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600'}`}
         >
-          <Eye className="w-4 h-4" /> Vue 3D
+          <Eye className="w-3.5 h-3.5" />
+          <span>Vue 3D</span>
         </button>
         <button
           onClick={() => setMobileTab('list')}
-          className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 transition ${mobileTab === 'list' ? 'bg-white shadow-xs text-indigo-600' : 'text-slate-600'}`}
+          className={`flex-1 py-1.5 rounded-lg flex items-center justify-center gap-1 transition ${mobileTab === 'list' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600'}`}
         >
-          <Layers className="w-4 h-4" /> Boîtes ({boxes.length})
+          <Layers className="w-3.5 h-3.5" />
+          <span>Boîtes ({boxes.length})</span>
         </button>
       </div>
 
@@ -1143,7 +1200,6 @@ export default function App() {
                   </h4>
                 </div>
 
-                {/* Champ Liste de choix de Pays au tout début */}
                 <div>
                   <label className="block text-[10px] font-bold text-indigo-700 uppercase mb-1 flex items-center gap-1">
                     <Globe className="w-3.5 h-3.5 text-indigo-600" /> Pays de livraison *
@@ -1221,7 +1277,6 @@ export default function App() {
                   </p>
                 </div>
                 
-                {/* Champ Note client avec l'exemple demandé */}
                 <div>
                   <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
                     <MessageSquare className="w-3 h-3 text-indigo-600" /> Notes ou instructions spéciales (facultatif)
@@ -1235,7 +1290,6 @@ export default function App() {
                   />
                 </div>
 
-                {/* Note d'information sur la procédure de paiement */}
                 <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[11px] font-semibold flex items-start gap-2">
                   <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                   <span>
@@ -1298,47 +1352,46 @@ export default function App() {
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           
           {/* Section 1 : Dimensions */}
-          <div className="p-4 border-b border-slate-100 space-y-3">
+          <div className="p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 sm:space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-sm">1</span>
+                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-xs">1</span>
                 <Maximize2 className="w-3.5 h-3.5 text-indigo-600" />
                 Dimensions ({activeDrawer.name})
               </h2>
             </div>
             
-            {/* Même template bleuté que pour les blocs 2 et 3 */}
-            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2.5 rounded-lg flex items-center gap-1.5">
+            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg flex items-center gap-1.5 leading-tight">
               <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Ce sont les dimensions internes précises du tiroir.</span>
+              <span>Dimensions internes du tiroir (mm).</span>
             </p>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Longueur</label>
+                <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Longueur</label>
                 <input
                   type="number"
                   value={drawerInputs.width}
                   onChange={(e) => handleDrawerInputChange('width', e.target.value)}
-                  className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Largeur</label>
+                <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Largeur</label>
                 <input
                   type="number"
                   value={drawerInputs.depth}
                   onChange={(e) => handleDrawerInputChange('depth', e.target.value)}
-                  className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Hauteur</label>
+                <label className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase">Hauteur</label>
                 <input
                   type="number"
                   value={drawerInputs.height}
                   onChange={(e) => handleDrawerInputChange('height', e.target.value)}
-                  className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
+                  className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:border-indigo-500"
                 />
               </div>
             </div>
@@ -1347,86 +1400,55 @@ export default function App() {
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
-                    <Sliders className="w-3 h-3 text-indigo-600" /> Jeu entre Boîtes (mm)
+                    <Sliders className="w-3 h-3 text-indigo-600" /> Jeu entre Boîtes
                   </label>
-                  <p className="text-[9px] text-slate-400">
-                    Espace d'insertion latéral
-                  </p>
                 </div>
-                <div className="relative w-24">
+                <div className="relative w-20 sm:w-24">
                   <input
                     type="number"
                     step="0.1"
                     min="0"
                     value={clearanceInput}
                     onChange={(e) => handleClearanceChange(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
+                    className="w-full px-2 py-1 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
                   />
-                  <span className="absolute right-2 top-2 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
+                  <span className="absolute right-2 top-1 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <label className="text-[10px] font-bold text-indigo-600 uppercase flex items-center gap-1">
-                    <ArrowDown className="w-3 h-3 text-indigo-600" /> Jeu de Hauteur (mm)
+                    <ArrowDown className="w-3 h-3 text-indigo-600" /> Jeu de Hauteur
                   </label>
-                  <p className="text-[9px] text-slate-400">
-                    Hauteur utile : <strong className="text-slate-600">{Math.max(5, drawer.height - heightMargin)} mm</strong>
-                  </p>
                 </div>
-                <div className="relative w-24">
+                <div className="relative w-20 sm:w-24">
                   <input
                     type="number"
                     step="0.5"
                     min="0"
                     value={heightMarginInput}
                     onChange={(e) => handleHeightMarginChange(e.target.value)}
-                    className="w-full px-2.5 py-2 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
+                    className="w-full px-2 py-1 bg-indigo-50/70 border border-indigo-200 rounded-lg text-xs font-bold text-indigo-700 text-right focus:outline-none focus:border-indigo-500 pr-7"
                   />
-                  <span className="absolute right-2 top-2 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
+                  <span className="absolute right-2 top-1 text-[10px] font-bold text-indigo-400 pointer-events-none">mm</span>
                 </div>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-slate-400" /> Parois (mm)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={boxSettings.wallThickness}
-                  className="w-full px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-400 cursor-not-allowed select-none"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-slate-400" /> Fond (mm)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={boxSettings.bottomThickness}
-                  className="w-full px-2 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-xs font-bold text-slate-400 cursor-not-allowed select-none"
-                />
               </div>
             </div>
           </div>
 
           {/* Section 2 : Plan 2D */}
-          <div className={`p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
+          <div className={`p-3.5 sm:p-4 border-b border-slate-100 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-sm">2</span>
+                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-xs">2</span>
                 <Grid className="w-3.5 h-3.5 text-indigo-600" />
                 Plan 2D ({activeDrawer.name})
               </h2>
               <div className="flex items-center gap-1">
                 <button
                   onClick={clearLayout}
-                  className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
+                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
                   title="Vider ce tiroir"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1434,7 +1456,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={resetLayoutToDefault}
-                  className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
+                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
                   title="Réinitialiser"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
@@ -1442,17 +1464,12 @@ export default function App() {
               </div>
             </div>
 
-            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2.5 rounded-lg mb-2 flex items-center gap-1.5">
-              <MousePointerClick className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Faites glisser votre curseur pour fusionner (Max compartiment : 240×240 mm).</span>
-            </p>
-
             <div 
               ref={gridContainerRef}
               onTouchMove={handleTouchMove}
               onTouchEnd={() => setIsSelecting(false)}
               style={{ aspectRatio: `${drawer.width} / ${drawer.depth}` }}
-              className="relative w-full max-h-[320px] mx-auto border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none"
+              className="relative w-full max-h-[300px] mx-auto border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none"
             >
               <div className="absolute inset-0 z-0">
                 {layout.map((b) => {
@@ -1474,7 +1491,7 @@ export default function App() {
                         backgroundColor: color
                       }}
                     >
-                      <span className="text-slate-900 text-[11px] font-extrabold shadow-sm bg-white/70 px-1.5 py-0.5 rounded">
+                      <span className="text-slate-900 text-[11px] font-extrabold shadow-xs bg-white/80 px-1 py-0.5 rounded">
                         {b.colSpan}×{b.rowSpan}
                       </span>
                     </div>
@@ -1484,7 +1501,7 @@ export default function App() {
 
               <div className="absolute inset-0 z-10 pointer-events-none grid grid-cols-4 grid-rows-4">
                 {Array.from({ length: 16 }).map((_, idx) => (
-                  <div key={idx} className="border border-dashed border-slate-900/25" />
+                  <div key={idx} className="border border-dashed border-slate-900/20" />
                 ))}
               </div>
 
@@ -1518,30 +1535,78 @@ export default function App() {
             {selectionBounds && (
               <button
                 onClick={mergeSelectedArea}
-                className="mt-3 w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200 flex items-center justify-center gap-2 min-h-[42px] cursor-pointer"
+                className="mt-2.5 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Combine className="w-4 h-4" />
-                Fusionner la zone ({selectionBounds.colSpan}×{selectionBounds.rowSpan})
+                Fusionner ({selectionBounds.colSpan}×{selectionBounds.rowSpan})
               </button>
             )}
           </div>
 
           {/* Section 3 : Boîtes */}
-          <div className={`p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
+          <div className={`p-3.5 sm:p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
-                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-sm">3</span>
+                <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-xs">3</span>
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
                 Boîtes du tiroir ({boxes.length})
               </h2>
             </div>
 
-            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Vous pouvez sélectionner la couleur en cliquant sur le rond de couleur.</span>
-            </p>
+            {/* VUE MOBILE SIMPLIFIÉE / RÉSUMÉ COMPACT DES BOÎTES */}
+            <div className="md:hidden space-y-2">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
+                  <span>Résumé des compartiments</span>
+                  <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-black">
+                    {boxes.length} boîte(s)
+                  </span>
+                </h4>
+                
+                <div className="space-y-1.5">
+                  {Object.values(groupedBoxes).map((group) => (
+                    <div key={group.key} className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: getDimensionColor(group.colSpan, group.rowSpan) }} />
+                        <span className="font-bold text-slate-800">{group.items.length}x Boîte {group.colSpan}×{group.rowSpan}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-500">
+                        {group.width}×{group.depth} mm
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            <div className="space-y-2">
+              {/* Sélecteur de couleurs rapide par boîte sur mobile */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Couleurs par boîte :</span>
+                {boxes.map((box, idx) => (
+                  <div key={box.id} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
+                    <span className="font-medium text-slate-700"># {idx + 1} ({box.colSpan}×{box.rowSpan})</span>
+                    <div className="flex items-center gap-1">
+                      {standardColors.filter(c => !c.disabled).map(c => (
+                        <button
+                          key={c.name}
+                          onClick={() => setCustomColors(prev => ({ ...prev, [box.id]: c.hex }))}
+                          className={`w-5 h-5 rounded-full border transition ${box.color === c.hex ? 'ring-2 ring-indigo-500 scale-110' : 'border-slate-300 opacity-80'}`}
+                          style={{ backgroundColor: c.hex }}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* VUE DESKTOP DETAILLÉE EXISTANTE */}
+            <div className="hidden md:block space-y-2">
+              <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span>Cliquez sur la pastille pour changer la couleur.</span>
+              </p>
+
               {boxes.map((box, idx) => {
                 const isPickerOpen = activeColorPickerId === box.id;
 
@@ -1549,25 +1614,23 @@ export default function App() {
                   <div key={box.id} className="relative">
                     <div 
                       onClick={() => setSelectedBoxId(box.id === selectedBoxId ? null : box.id)}
-                      className={`p-3 rounded-xl border transition cursor-pointer flex items-center justify-between ${
+                      className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
                         selectedBoxId === box.id 
-                          ? 'border-indigo-500 bg-indigo-50/50 shadow-sm' 
+                          ? 'border-indigo-500 bg-indigo-50/50 shadow-xs' 
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="relative">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveColorPickerId(isPickerOpen ? null : box.id);
-                            }}
-                            className="w-7 h-7 rounded-full flex-shrink-0 border-2 border-white ring-2 ring-slate-200 hover:scale-110 transition-transform shadow-xs cursor-pointer"
-                            style={{ backgroundColor: box.color }}
-                            title="Changer la couleur"
-                          />
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveColorPickerId(isPickerOpen ? null : box.id);
+                          }}
+                          className="w-6 h-6 rounded-full flex-shrink-0 border-2 border-white ring-2 ring-slate-200 hover:scale-110 transition-transform shadow-xs cursor-pointer"
+                          style={{ backgroundColor: box.color }}
+                          title="Changer la couleur"
+                        />
 
                         <div>
                           <h4 className="text-xs font-bold text-slate-800">Compartiment #{idx + 1}</h4>
@@ -1595,7 +1658,7 @@ export default function App() {
                             className={`flex flex-col items-center gap-1 p-1 rounded-lg transition group ${
                               c.disabled ? 'opacity-40 cursor-not-allowed bg-slate-100' : 'hover:bg-slate-100 cursor-pointer'
                             }`}
-                            title={c.disabled ? `${c.name} (Non disponible / grisé)` : c.name}
+                            title={c.disabled ? `${c.name} (Non disponible)` : c.name}
                           >
                             <span 
                               className="w-5 h-5 rounded-full border border-black/20 group-hover:scale-110 transition-transform shadow-xs" 
@@ -1613,14 +1676,35 @@ export default function App() {
           </div>
         </div>
 
-        <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[350px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
+        <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[300px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
-          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-2.5 rounded-xl text-[10px] text-slate-600 shadow-sm flex items-center gap-2 pointer-events-none z-10">
-            <Eye className="w-4 h-4 text-indigo-600" />
+          <div className="absolute bottom-4 right-4 bg-white/80 backdrop-blur border border-slate-200 p-2 rounded-xl text-[10px] text-slate-600 shadow-xs flex items-center gap-1.5 pointer-events-none z-10">
+            <Eye className="w-3.5 h-3.5 text-indigo-600" />
             <span>Vue 3D ({activeDrawer.name})</span>
           </div>
         </div>
+      </div>
+
+      {/* BARRE ACTION FIXE EN BAS SUR MOBILE (DEMANDE DE DEVIS & TOTAL) */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-3 py-2 flex items-center justify-between z-40 shadow-lg">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-emerald-500 rounded-lg text-white">
+            <Euro className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block leading-none">Total ({allDrawersBoxes.length})</span>
+            <span className="text-sm font-black text-emerald-600 leading-tight">{totalPrice.toFixed(2)} €</span>
+          </div>
+        </div>
+
+        <button
+          onClick={() => setShowShareModal(true)}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-200 cursor-pointer active:scale-95"
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Devis & Commande</span>
+        </button>
       </div>
     </div>
   );
