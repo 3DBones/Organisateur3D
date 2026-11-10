@@ -107,14 +107,16 @@ const generateBoxSTL = (box) => {
     addFacet(normal, v1, v3, v4);
   };
 
+  // Bottom outer face (Z = 0)
   const centerOuter = [w / 2, d / 2, 0];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
     const p2 = [outerPoly[next][0], outerPoly[next][1], 0];
-    addFacet([0, 0, -1], centerOuter, p1, p2);
+    addFacet([0, 0, -1], centerOuter, p2, p1);
   }
 
+  // Outer side walls (Z = 0 to Z = h)
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
@@ -131,14 +133,16 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p2, p2h, p1h, [nx, ny, 0]);
   }
 
+  // Inner bottom face (Z = b)
   const centerInner = [w / 2, d / 2, b];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [innerPoly[i][0], innerPoly[i][1], b];
     const p2 = [innerPoly[next][0], innerPoly[next][1], b];
-    addFacet([0, 0, 1], centerInner, p2, p1);
+    addFacet([0, 0, 1], centerInner, p1, p2);
   }
 
+  // Inner side walls (Z = b to Z = h)
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [innerPoly[i][0], innerPoly[i][1], b];
@@ -155,6 +159,7 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p1h, p2h, p2, [nx, ny, 0]);
   }
 
+  // Top edge rim (Z = h)
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const o1 = [outerPoly[i][0], outerPoly[i][1], h];
@@ -933,31 +938,34 @@ export default function App() {
       const outerShape = createRoundedBoxShape(b.width, b.depth, cornerRadius);
 
       if (b.width > wallT * 2 && b.depth > wallT * 2) {
-        const innerShapePath = new THREE.Path();
+        const innerPath = new THREE.Path();
         const inW = b.width - wallT * 2;
         const inD = b.depth - wallT * 2;
         const inR = Math.max(1, cornerRadius - wallT);
 
-        innerShapePath.moveTo(wallT + inR, wallT);
-        innerShapePath.lineTo(wallT + inW - inR, wallT);
-        innerShapePath.quadraticCurveTo(wallT + inW, wallT, wallT + inW, wallT + inR);
-        innerShapePath.lineTo(wallT + inW, wallT + inD - inR);
-        innerShapePath.quadraticCurveTo(wallT + inW, wallT + inD, wallT + inW - inR, wallT + inD);
-        innerShapePath.lineTo(wallT + inR, wallT);
-        innerShapePath.quadraticCurveTo(wallT, wallT + inD, wallT, wallT + inD - inR);
-        innerShapePath.lineTo(wallT, wallT + inR);
-        innerShapePath.quadraticCurveTo(wallT, wallT, wallT + inR, wallT);
+        // Reverse direction for hole in Three.js Shape
+        innerPath.moveTo(wallT + inR, wallT);
+        innerPath.quadraticCurveTo(wallT, wallT, wallT, wallT + inR);
+        innerPath.lineTo(wallT, wallT + inD - inR);
+        innerPath.quadraticCurveTo(wallT, wallT + inD, wallT + inR, wallT + inD);
+        innerPath.lineTo(wallT + inW - inR, wallT + inD);
+        innerPath.quadraticCurveTo(wallT + inW, wallT + inD, wallT + inW, wallT + inD - inR);
+        innerPath.lineTo(wallT + inW, wallT + inR);
+        innerPath.quadraticCurveTo(wallT + inW, wallT, wallT + inW - inR, wallT);
+        innerPath.lineTo(wallT + inR, wallT);
 
-        outerShape.holes.push(innerShapePath);
+        outerShape.holes.push(innerPath);
       }
 
-      const extrudeSettings = {
+      // Walls Geometry (Hole extruded from bottomT to height)
+      const wallExtrudeSettings = {
         depth: b.height - bottomT,
         bevelEnabled: false
       };
-      const wallsGeo = new THREE.ExtrudeGeometry(outerShape, extrudeSettings);
+      const wallsGeo = new THREE.ExtrudeGeometry(outerShape, wallExtrudeSettings);
       wallsGeo.rotateX(-Math.PI / 2);
 
+      // Solid Bottom Geometry
       const bottomShape = createRoundedBoxShape(b.width, b.depth, cornerRadius);
       const bottomGeo = new THREE.ExtrudeGeometry(bottomShape, {
         depth: bottomT,
@@ -1351,8 +1359,8 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           
-          {/* Section 1 : Dimensions */}
-          <div className="p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 sm:space-y-3">
+          {/* Section 1 : Dimensions (Masquée sur Mobile si onglet Boîtes actif pour maximiser l'espace) */}
+          <div className={`p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 sm:space-y-3 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                 <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-xs">1</span>
