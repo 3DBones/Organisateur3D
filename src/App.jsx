@@ -20,13 +20,14 @@ import {
   ShoppingBag,
   Smartphone,
   CheckCircle,
-  MousePointerClick,
   Info,
   Loader2,
   Sliders,
   MessageSquare,
   Globe,
-  Plus
+  Plus,
+  Sparkles,
+  ArrowRight
 } from 'lucide-react';
 
 const standardColors = [
@@ -36,7 +37,7 @@ const standardColors = [
   { name: 'Orange', hex: '#f97316', disabled: false },
   { name: 'Vert', hex: '#10b981', disabled: true },
   { name: 'Blanc', hex: '#e2e8f0', disabled: false },
-  { name: 'Noir', hex: '#0f172a', disabled: false },
+  { name: 'Noir', hex: '#0f172a', disabled: true },
   { name: 'Gris', hex: '#64748b', disabled: true }
 ];
 
@@ -227,6 +228,8 @@ export default function App() {
   const layout = activeDrawer.layout;
   const customColors = activeDrawer.customColors;
 
+  const notesInputRef = useRef(null);
+
   const updateActiveDrawer = (updater) => {
     setDrawersList(prev => prev.map(d => d.id === activeDrawerId ? updater(d) : d));
   };
@@ -358,6 +361,17 @@ export default function App() {
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [orderSent, setOrderSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
+
+  // Fonction pour ouvrir la modal de commande et faire le focus sur les notes
+  const openCustomizationNotes = () => {
+    setShowShareModal(true);
+    setTimeout(() => {
+      if (notesInputRef.current) {
+        notesInputRef.current.focus();
+        notesInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 200);
+  };
 
   const handleHeightMarginChange = (val) => {
     setHeightMarginInput(val);
@@ -943,7 +957,6 @@ export default function App() {
         const inD = b.depth - wallT * 2;
         const inR = Math.max(1, cornerRadius - wallT);
 
-        // Reverse direction for hole in Three.js Shape
         innerPath.moveTo(wallT + inR, wallT);
         innerPath.quadraticCurveTo(wallT, wallT, wallT, wallT + inR);
         innerPath.lineTo(wallT, wallT + inD - inR);
@@ -957,7 +970,6 @@ export default function App() {
         outerShape.holes.push(innerPath);
       }
 
-      // Walls Geometry (Hole extruded from bottomT to height)
       const wallExtrudeSettings = {
         depth: b.height - bottomT,
         bevelEnabled: false
@@ -965,7 +977,6 @@ export default function App() {
       const wallsGeo = new THREE.ExtrudeGeometry(outerShape, wallExtrudeSettings);
       wallsGeo.rotateX(-Math.PI / 2);
 
-      // Solid Bottom Geometry
       const bottomShape = createRoundedBoxShape(b.width, b.depth, cornerRadius);
       const bottomGeo = new THREE.ExtrudeGeometry(bottomShape, {
         depth: bottomT,
@@ -1012,7 +1023,6 @@ export default function App() {
 
   const selectionBounds = getSelectionBounds();
 
-  // Grouped boxes for simplified summary tab on mobile
   const groupedBoxes = boxes.reduce((acc, box) => {
     const key = `${box.colSpan}x${box.rowSpan}`;
     if (!acc[key]) {
@@ -1048,7 +1058,7 @@ export default function App() {
         </div>
       )}
 
-      {/* HEADER DESKTOP SEULEMENT */}
+      {/* HEADER DESKTOP */}
       <header className="hidden md:flex bg-white border-b border-slate-200 px-6 py-2.5 items-center justify-between z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
@@ -1082,15 +1092,7 @@ export default function App() {
         </div>
       </header>
 
-      {/* BANDEAU ASTUCE - DESKTOP SEULEMENT */}
-      <div className="hidden md:flex bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-1.5 text-xs font-bold items-center justify-between shrink-0 shadow-inner">
-        <div className="flex items-center gap-2">
-          <Info className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Astuce : Utilisez l'onglet ci-dessous pour basculer ou ajouter un nouveau tiroir à tout moment !</span>
-        </div>
-      </div>
-
-      {/* BANDEAU BLEU MES TIROIRS - DIRECTEMENT EN HAUT SUR MOBILE */}
+      {/* BANDEAU MES TIROIRS */}
       <div className="bg-slate-800 text-white px-2.5 sm:px-6 py-1.5 sm:py-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto shrink-0 shadow-md z-20">
         <div className="flex items-center gap-1 md:hidden shrink-0 pr-1 border-r border-slate-700">
           <Box className="w-4 h-4 text-indigo-400" />
@@ -1136,7 +1138,6 @@ export default function App() {
           <span className="md:hidden text-[11px]">Tiroir</span>
         </button>
 
-        {/* Bouton Info Astuce très discret sur Mobile */}
         <button 
           onClick={() => setShowTip(!showTip)} 
           className="md:hidden p-1 text-slate-300 hover:text-amber-300 transition shrink-0"
@@ -1146,7 +1147,6 @@ export default function App() {
         </button>
       </div>
 
-      {/* TIP DROPDOWN POPUP SUR MOBILE (quand on clique sur l'icône info) */}
       {showTip && (
         <div className="md:hidden bg-amber-50 border-b border-amber-200 text-amber-900 p-2.5 text-xs font-medium flex items-start gap-2 shrink-0 animate-in fade-in duration-200">
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -1159,7 +1159,7 @@ export default function App() {
         </div>
       )}
 
-      {/* NOUVELLE BARRE DE NAVIGATION EN ONGLETS MOBILE */}
+      {/* NAVIGATION MOBILES */}
       <div className="md:hidden bg-white p-1 flex justify-around border-b border-slate-200 text-xs font-bold shrink-0 z-10 shadow-xs">
         <button
           onClick={() => setMobileTab('2d')}
@@ -1184,6 +1184,7 @@ export default function App() {
         </button>
       </div>
 
+      {/* MODAL DE COMMANDE */}
       {showShareModal && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-xl overflow-hidden my-auto max-h-[90vh] flex flex-col">
@@ -1286,15 +1287,16 @@ export default function App() {
                 </div>
                 
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1 flex items-center gap-1">
-                    <MessageSquare className="w-3 h-3 text-indigo-600" /> Notes ou instructions spéciales (facultatif)
+                  <label className="block text-[10px] font-bold text-slate-600 uppercase mb-1 flex items-center gap-1">
+                    <MessageSquare className="w-3.5 h-3.5 text-indigo-600" /> Note de commande / Personnalisation
                   </label>
                   <textarea
-                    placeholder="Ex: demande une couleur indisponible..."
+                    ref={notesInputRef}
+                    placeholder="Ex: Je souhaite une couleur spécifique indisponible, un ajustement particulier..."
                     value={clientInfo.notes}
                     onChange={(e) => setClientInfo({ ...clientInfo, notes: e.target.value })}
-                    rows="2"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs resize-none"
+                    rows="3"
+                    className="w-full px-3 py-2 bg-indigo-50/40 border border-indigo-200 rounded-lg focus:outline-none focus:border-indigo-500 text-xs resize-none"
                   />
                 </div>
 
@@ -1359,7 +1361,31 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           
-          {/* Section 1 : Dimensions (Masquée sur Mobile si onglet Boîtes actif pour maximiser l'espace) */}
+          {/* BULLE INFO PERSONNALISATION & COULEUR INDISPONIBLE EN PREMIÈRE PAGE */}
+          <div className="p-3.5 bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-700 text-white shadow-md border-b border-indigo-300 relative overflow-hidden shrink-0">
+            <div className="flex items-start gap-2.5">
+              <div className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="text-[11px] font-semibold leading-snug text-indigo-50">
+                  Vous souhaitez une <strong className="text-white font-extrabold underline decoration-amber-300 decoration-2">personnalisation</strong> ou une <strong className="text-white font-extrabold underline decoration-amber-300 decoration-2">couleur indisponible</strong> ? C'est possible !
+                </p>
+                <p className="text-[10px] text-indigo-100 font-medium">
+                  Ajoutez une note dans la commande et on en discute.
+                </p>
+                <button
+                  onClick={openCustomizationNotes}
+                  className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 text-[11px] font-black rounded-md shadow-xs transition-transform active:scale-95 cursor-pointer"
+                >
+                  <span>Ajouter une note</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 1 : Dimensions */}
           <div className={`p-3.5 sm:p-4 border-b border-slate-100 space-y-2.5 sm:space-y-3 ${mobileTab === 'list' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
@@ -1571,7 +1597,6 @@ export default function App() {
               </h2>
             </div>
 
-            {/* VUE MOBILE SIMPLIFIÉE / RÉSUMÉ COMPACT DES BOÎTES */}
             <div className="md:hidden space-y-2">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
                 <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
@@ -1596,7 +1621,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Sélecteur de couleurs rapide par boîte sur mobile */}
               <div className="space-y-1.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Couleurs par boîte :</span>
                 {boxes.map((box, idx) => (
@@ -1618,7 +1642,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* VUE DESKTOP DETAILLÉE EXISTANTE */}
             <div className="hidden md:block space-y-2">
               <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2 flex items-center gap-1.5">
                 <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
@@ -1694,6 +1717,7 @@ export default function App() {
           </div>
         </div>
 
+        {/* RENDU 3D */}
         <div className={`flex-1 relative bg-slate-100 w-full h-full min-h-[300px] ${mobileTab === '3d' || window.innerWidth >= 768 ? 'flex' : 'hidden'}`}>
           <div ref={mountRef} className="w-full h-full absolute inset-0 cursor-grab active:cursor-grabbing" />
           
@@ -1704,7 +1728,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* BARRE ACTION FIXE EN BAS SUR MOBILE (DEMANDE DE DEVIS & TOTAL) */}
+      {/* BARRE ACTION FIXE BAS MOBILE */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-3 py-2 flex items-center justify-between z-40 shadow-lg">
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-emerald-500 rounded-lg text-white">
