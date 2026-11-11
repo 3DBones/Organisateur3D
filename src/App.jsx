@@ -57,7 +57,8 @@ const getDimensionColor = (colSpan, rowSpan) => {
     '1x4': '#dc2626',
     '4x2': '#f97316',
     '2x4': '#2563eb',
-    '4x4': '#FFD700'
+    '4x4': '#FFD700',
+    '6x6': '#FFD700'
   };
   return colorMap[key] || '#e2e8f0';
 };
@@ -193,12 +194,12 @@ const createRoundedBoxShape = (width, depth, radius = 8) => {
 };
 
 export default function App() {
-  const MAX_COMPARTMENT_SIZE = 240;
+  const MAX_COMPARTMENT_SIZE = 250;
 
   const defaultLayout = [
-    { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 4 },
-    { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 },
-    { id: '3', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }
+    { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 6 },
+    { id: '2', colStart: 3, rowStart: 0, colSpan: 3, rowSpan: 3 },
+    { id: '3', colStart: 3, rowStart: 3, colSpan: 3, rowSpan: 3 }
   ];
 
   const [drawersList, setDrawersList] = useState([
@@ -294,8 +295,8 @@ export default function App() {
       clearance: drawersList[0].clearance,
       clearanceInput: drawersList[0].clearanceInput,
       layout: [
-        { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 2 },
-        { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 }
+        { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 3 },
+        { id: '2', colStart: 3, rowStart: 0, colSpan: 3, rowSpan: 3 }
       ],
       customColors: {}
     };
@@ -316,7 +317,7 @@ export default function App() {
     }
   };
 
-  const [gridSize] = useState({ rows: 4, cols: 4 });
+  const [gridSize] = useState({ rows: 6, cols: 6 });
   const [boxes, setBoxes] = useState([]);
   const [selectedBoxId, setSelectedBoxId] = useState(null);
   const [activeColorPickerId, setActiveColorPickerId] = useState(null);
@@ -362,7 +363,6 @@ export default function App() {
   const [orderSent, setOrderSent] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // Fonction pour ouvrir la modal de commande et faire le focus sur les notes
   const openCustomizationNotes = () => {
     setShowShareModal(true);
     setTimeout(() => {
@@ -683,10 +683,10 @@ export default function App() {
 
   const resetLayoutToDefault = () => {
     setLayout([
-      { id: '1', colStart: 0, rowStart: 0, colSpan: 2, rowSpan: 2 },
-      { id: '2', colStart: 2, rowStart: 0, colSpan: 2, rowSpan: 2 },
-      { id: '3', colStart: 0, rowStart: 2, colSpan: 2, rowSpan: 2 },
-      { id: '4', colStart: 2, rowStart: 2, colSpan: 2, rowSpan: 2 }
+      { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 3 },
+      { id: '2', colStart: 3, rowStart: 0, colSpan: 3, rowSpan: 3 },
+      { id: '3', colStart: 0, rowStart: 3, colSpan: 3, rowSpan: 3 },
+      { id: '4', colStart: 3, rowStart: 3, colSpan: 3, rowSpan: 3 }
     ]);
     setSelectionStart(null);
     setSelectionEnd(null);
@@ -1361,7 +1361,7 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden relative">
         <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           
-          {/* BULLE INFO PERSONNALISATION & COULEUR INDISPONIBLE EN PREMIÈRE PAGE */}
+          {/* BULLE INFO PERSONNALISATION */}
           <div className="p-3.5 bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-700 text-white shadow-md border-b border-indigo-300 relative overflow-hidden shrink-0">
             <div className="flex items-start gap-2.5">
               <div className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg shrink-0 mt-0.5">
@@ -1543,8 +1543,8 @@ export default function App() {
                 })}
               </div>
 
-              <div className="absolute inset-0 z-10 pointer-events-none grid grid-cols-4 grid-rows-4">
-                {Array.from({ length: 16 }).map((_, idx) => (
+              <div className="absolute inset-0 z-10 pointer-events-none grid grid-cols-6 grid-rows-6">
+                {Array.from({ length: 36 }).map((_, idx) => (
                   <div key={idx} className="border border-dashed border-slate-900/20" />
                 ))}
               </div>
@@ -1561,7 +1561,7 @@ export default function App() {
                 />
               )}
 
-              <div className="absolute inset-0 z-30 grid grid-cols-4 grid-rows-4 cursor-pointer">
+              <div className="absolute inset-0 z-30 grid grid-cols-6 grid-rows-6 cursor-pointer">
                 {Array.from({ length: gridSize.rows }).map((_, r) =>
                   Array.from({ length: gridSize.cols }).map((_, c) => (
                     <div
