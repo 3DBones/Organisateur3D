@@ -27,7 +27,9 @@ import {
   Globe,
   Plus,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Scaling,
+  AlertTriangle
 } from 'lucide-react';
 
 const standardColors = [
@@ -41,7 +43,7 @@ const standardColors = [
   { name: 'Gris', hex: '#64748b', disabled: true }
 ];
 
-const getDimensionColor = (colSpan, rowSpan) => {
+const getDimensionColor = (colSpan, rowSpan, index = 0) => {
   const key = `${colSpan}x${rowSpan}`;
   const colorMap = {
     '1x1': '#2563eb',
@@ -60,7 +62,57 @@ const getDimensionColor = (colSpan, rowSpan) => {
     '4x4': '#FFD700',
     '6x6': '#FFD700'
   };
-  return colorMap[key] || '#e2e8f0';
+  if (colorMap[key]) return colorMap[key];
+  const palette = ['#FFD700', '#f97316', '#dc2626', '#e2e8f0', '#2563eb', '#10b981'];
+  return palette[index % palette.length];
+};
+
+// Calcul des largeurs/profondeurs réelles de chaque colonne/ligne à partir des poids
+const computeGridTracks = (totalSize, weights) => {
+  const safeWeights = weights && weights.length === 6 ? weights : [1, 1, 1, 1, 1, 1];
+  const totalWeight = safeWeights.reduce((sum, w) => sum + w, 0) || 6;
+  const sizes = safeWeights.map(w => (w / totalWeight) * totalSize);
+  const offsets = [];
+  let acc = 0;
+  for (let i = 0; i < sizes.length; i++) {
+    offsets.push(acc);
+    acc += sizes[i];
+  }
+  return { sizes, offsets };
+};
+
+// Calcul des dimensions exactes d'un compartiment sur la grille pondérée
+const computeBoxMetrics = (item, drawerDims, clearance, heightMargin, colWeights, rowWeights) => {
+  const { sizes: colSizes, offsets: colOffsets } = computeGridTracks(drawerDims.width, colWeights);
+  const { sizes: rowSizes, offsets: rowOffsets } = computeGridTracks(drawerDims.depth, rowWeights);
+  const actualHeight = Math.max(5, drawerDims.height - heightMargin);
+
+  let rawWidth = 0;
+  for (let c = item.colStart; c < item.colStart + item.colSpan; c++) {
+    rawWidth += colSizes[c] || 0;
+  }
+
+  let rawDepth = 0;
+  for (let r = item.rowStart; r < item.rowStart + item.rowSpan; r++) {
+    rawDepth += rowSizes[r] || 0;
+  }
+
+  const boxWidth = Math.max(10, Math.round((rawWidth - clearance) * 10) / 10);
+  const boxDepth = Math.max(10, Math.round((rawDepth - clearance) * 10) / 10);
+  const boxHeight = Math.max(10, Math.round(actualHeight * 10) / 10);
+
+  const posX = (colOffsets[item.colStart] || 0) + clearance / 2;
+  const posY = (rowOffsets[item.rowStart] || 0) + clearance / 2;
+
+  return {
+    x: posX,
+    y: posY,
+    width: boxWidth,
+    depth: boxDepth,
+    height: boxHeight,
+    rawWidth,
+    rawDepth
+  };
 };
 
 const generateBoxSTL = (box) => {
@@ -109,7 +161,6 @@ const generateBoxSTL = (box) => {
     addFacet(normal, v1, v3, v4);
   };
 
-  // Bottom outer face (Z = 0)
   const centerOuter = [w / 2, d / 2, 0];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
@@ -118,7 +169,6 @@ const generateBoxSTL = (box) => {
     addFacet([0, 0, -1], centerOuter, p2, p1);
   }
 
-  // Outer side walls (Z = 0 to Z = h)
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [outerPoly[i][0], outerPoly[i][1], 0];
@@ -135,7 +185,6 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p2, p2h, p1h, [nx, ny, 0]);
   }
 
-  // Inner bottom face (Z = b)
   const centerInner = [w / 2, d / 2, b];
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
@@ -144,7 +193,6 @@ const generateBoxSTL = (box) => {
     addFacet([0, 0, 1], centerInner, p1, p2);
   }
 
-  // Inner side walls (Z = b to Z = h)
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const p1 = [innerPoly[i][0], innerPoly[i][1], b];
@@ -161,7 +209,6 @@ const generateBoxSTL = (box) => {
     addQuad(p1, p1h, p2h, p2, [nx, ny, 0]);
   }
 
-  // Top edge rim (Z = h)
   for (let i = 0; i < N; i++) {
     const next = (i + 1) % N;
     const o1 = [outerPoly[i][0], outerPoly[i][1], h];
@@ -195,6 +242,8 @@ const createRoundedBoxShape = (width, depth, radius = 8) => {
 
 export default function App() {
   const MAX_COMPARTMENT_SIZE = 250;
+  const MIN_TRACK_SIZE = 15;
+  const DEFAULT_WEIGHTS = [1, 1, 1, 1, 1, 1];
 
   const defaultLayout = [
     { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 6 },
@@ -212,6 +261,8 @@ export default function App() {
       heightMarginInput: '2',
       clearance: 1,
       clearanceInput: '1',
+      colWeights: [...DEFAULT_WEIGHTS],
+      rowWeights: [...DEFAULT_WEIGHTS],
       layout: defaultLayout,
       customColors: {}
     }
@@ -226,10 +277,21 @@ export default function App() {
   const heightMargin = activeDrawer.heightMargin;
   const clearanceInput = activeDrawer.clearanceInput;
   const clearance = activeDrawer.clearance;
+  const colWeights = activeDrawer.colWeights || DEFAULT_WEIGHTS;
+  const rowWeights = activeDrawer.rowWeights || DEFAULT_WEIGHTS;
   const layout = activeDrawer.layout;
   const customColors = activeDrawer.customColors;
 
   const notesInputRef = useRef(null);
+
+  const [gridSize] = useState({ rows: 6, cols: 6 });
+  const [boxes, setBoxes] = useState([]);
+  const [selectedBoxId, setSelectedBoxId] = useState(null);
+  const [activeColorPickerId, setActiveColorPickerId] = useState(null);
+
+  // États locaux pour l'édition fluide des cotes exactes (width/depth en mm) par compartiment
+  const [boxDimInputs, setBoxDimInputs] = useState({});
+  const [dimWarning, setDimWarning] = useState(null);
 
   const updateActiveDrawer = (updater) => {
     setDrawersList(prev => prev.map(d => d.id === activeDrawerId ? updater(d) : d));
@@ -279,10 +341,18 @@ export default function App() {
     });
   };
 
+  const resetWeights = () => {
+    updateActiveDrawer(d => ({
+      ...d,
+      colWeights: [...DEFAULT_WEIGHTS],
+      rowWeights: [...DEFAULT_WEIGHTS]
+    }));
+    setDimWarning(null);
+  };
+
   const addNewDrawer = () => {
     const newId = `drawer-${Date.now()}`;
     const newDrawerNum = drawersList.length + 1;
-    
     const refDrawer = drawersList[0].dimensions;
 
     const newDrawerItem = {
@@ -294,6 +364,8 @@ export default function App() {
       heightMarginInput: drawersList[0].heightMarginInput,
       clearance: drawersList[0].clearance,
       clearanceInput: drawersList[0].clearanceInput,
+      colWeights: [...DEFAULT_WEIGHTS],
+      rowWeights: [...DEFAULT_WEIGHTS],
       layout: [
         { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 3 },
         { id: '2', colStart: 3, rowStart: 0, colSpan: 3, rowSpan: 3 }
@@ -307,7 +379,7 @@ export default function App() {
   const removeDrawer = (id, e) => {
     e.stopPropagation();
     if (drawersList.length <= 1) {
-      alert("Vous devez conserver au moins un tiroir.");
+      setDimWarning("Vous devez conserver au moins un tiroir.");
       return;
     }
     const filtered = drawersList.filter(d => d.id !== id);
@@ -317,10 +389,107 @@ export default function App() {
     }
   };
 
-  const [gridSize] = useState({ rows: 6, cols: 6 });
-  const [boxes, setBoxes] = useState([]);
-  const [selectedBoxId, setSelectedBoxId] = useState(null);
-  const [activeColorPickerId, setActiveColorPickerId] = useState(null);
+  // Recalcul des poids des colonnes ou des lignes lorsqu'une cote exacte est saisie
+  const applyExactBoxDimension = (boxId, axis, targetMm) => {
+    const boxItem = layout.find(b => b.id === boxId);
+    if (!boxItem) return;
+
+    const isWidth = axis === 'width';
+    const totalDrawerSize = isWidth ? drawer.width : drawer.depth;
+    const startIdx = isWidth ? boxItem.colStart : boxItem.rowStart;
+    const span = isWidth ? boxItem.colSpan : boxItem.rowSpan;
+    const totalTracks = isWidth ? gridSize.cols : gridSize.rows;
+    const currentWeights = isWidth ? [...colWeights] : [...rowWeights];
+
+    // Si la boîte occupe toute la largeur/profondeur du tiroir, on ne peut pas changer sa dimension indépendamment du tiroir
+    if (span >= totalTracks) {
+      setDimWarning(
+        `Ce compartiment occupe toute la ${isWidth ? 'longueur' : 'largeur'} du tiroir (${Math.round((totalDrawerSize - clearance) * 10) / 10} mm). Modifiez l'étape 1 ou divisez-le en plusieurs cases.`
+      );
+      return;
+    }
+
+    const remainingTracks = totalTracks - span;
+    // Espace brut nécessaire sur la grille = cote boîte demandée + jeu entre boîtes
+    const minAllowedBox = MIN_TRACK_SIZE;
+    const maxPossibleRaw = totalDrawerSize - remainingTracks * MIN_TRACK_SIZE;
+    const maxAllowedBox = Math.min(MAX_COMPARTMENT_SIZE, Math.round((maxPossibleRaw - clearance) * 10) / 10);
+
+    if (maxAllowedBox < minAllowedBox) {
+      setDimWarning(`Le tiroir (${totalDrawerSize} mm) est trop petit pour redimensionner ce compartiment.`);
+      return;
+    }
+
+    let clampedTarget = targetMm;
+    if (targetMm > MAX_COMPARTMENT_SIZE) {
+      setDimWarning(
+        `Limite d'impression : ${MAX_COMPARTMENT_SIZE} mm max. Cote ajustée à ${maxAllowedBox} mm (ajoutez une note pour un assemblage sur-mesure).`
+      );
+      clampedTarget = maxAllowedBox;
+    } else if (targetMm > maxAllowedBox) {
+      setDimWarning(
+        `Cote max possible dans ce tiroir : ${maxAllowedBox} mm (pour conserver au moins ${MIN_TRACK_SIZE} mm sur les autres colonnes/lignes).`
+      );
+      clampedTarget = maxAllowedBox;
+    } else if (targetMm < minAllowedBox) {
+      setDimWarning(`La dimension minimale d'un compartiment est de ${minAllowedBox} mm.`);
+      clampedTarget = minAllowedBox;
+    } else {
+      setDimWarning(null);
+    }
+
+    const desiredRawSpanSize = clampedTarget + clearance;
+    const remainingRawSize = totalDrawerSize - desiredRawSpanSize;
+
+    // Poids proportionnels aux poids actuels à l'intérieur et à l'extérieur de la boîte
+    let insideWeightSum = 0;
+    let outsideWeightSum = 0;
+    for (let i = 0; i < totalTracks; i++) {
+      if (i >= startIdx && i < startIdx + span) {
+        insideWeightSum += currentWeights[i];
+      } else {
+        outsideWeightSum += currentWeights[i];
+      }
+    }
+
+    const newWeights = currentWeights.map((w, i) => {
+      if (i >= startIdx && i < startIdx + span) {
+        const ratio = insideWeightSum > 0 ? w / insideWeightSum : 1 / span;
+        return Math.max(0.01, desiredRawSpanSize * ratio);
+      } else {
+        const ratio = outsideWeightSum > 0 ? w / outsideWeightSum : 1 / remainingTracks;
+        return Math.max(0.01, remainingRawSize * ratio);
+      }
+    });
+
+    updateActiveDrawer(d => ({
+      ...d,
+      ...(isWidth ? { colWeights: newWeights } : { rowWeights: newWeights })
+    }));
+  };
+
+  const handleBoxDimInputChange = (boxId, axis, rawValue) => {
+    setBoxDimInputs(prev => ({
+      ...prev,
+      [boxId]: {
+        ...(prev[boxId] || {}),
+        [axis]: rawValue
+      }
+    }));
+
+    const parsed = parseFloat(rawValue);
+    if (!isNaN(parsed) && parsed >= 10) {
+      applyExactBoxDimension(boxId, axis, parsed);
+    }
+  };
+
+  const handleBoxDimBlur = (box) => {
+    setBoxDimInputs(prev => {
+      const next = { ...prev };
+      delete next[box.id];
+      return next;
+    });
+  };
 
   const [mobileTab, setMobileTab] = useState('2d');
   const [showTip, setShowTip] = useState(false);
@@ -412,30 +581,31 @@ export default function App() {
   const getAllBoxesFromDrawers = (dList) => {
     let allBoxes = [];
     dList.forEach((dItem) => {
-      const uW = dItem.dimensions.width / gridSize.cols;
-      const uD = dItem.dimensions.depth / gridSize.rows;
-      const actH = Math.max(5, dItem.dimensions.height - dItem.heightMargin);
+      const cWeights = dItem.colWeights || DEFAULT_WEIGHTS;
+      const rWeights = dItem.rowWeights || DEFAULT_WEIGHTS;
 
-      dItem.layout.forEach((item) => {
-        const rawW = item.colSpan * uW;
-        const rawD = item.rowSpan * uD;
-
-        const bW = Math.max(10, Math.round((rawW - dItem.clearance) * 10) / 10);
-        const bD = Math.max(10, Math.round((rawD - dItem.clearance) * 10) / 10);
-        const bH = Math.max(10, Math.round(actH * 10) / 10);
+      dItem.layout.forEach((item, idx) => {
+        const metrics = computeBoxMetrics(
+          item,
+          dItem.dimensions,
+          dItem.clearance,
+          dItem.heightMargin,
+          cWeights,
+          rWeights
+        );
 
         allBoxes.push({
           drawerName: dItem.name,
           drawerId: dItem.id,
           id: item.id,
-          width: bW,
-          depth: bD,
-          height: bH,
+          width: metrics.width,
+          depth: metrics.depth,
+          height: metrics.height,
           colSpan: item.colSpan,
           rowSpan: item.rowSpan,
           wallThickness: boxSettings.wallThickness,
           bottomThickness: boxSettings.bottomThickness,
-          color: dItem.customColors[item.id] || getDimensionColor(item.colSpan, item.rowSpan)
+          color: dItem.customColors[item.id] || getDimensionColor(item.colSpan, item.rowSpan, idx)
         });
       });
     });
@@ -506,25 +676,26 @@ export default function App() {
   const downloadAllSTL = () => {
     let globalIndex = 0;
     drawersList.forEach((dItem) => {
-      const uW = dItem.dimensions.width / gridSize.cols;
-      const uD = dItem.dimensions.depth / gridSize.rows;
-      const actH = Math.max(5, dItem.dimensions.height - dItem.heightMargin);
+      const cWeights = dItem.colWeights || DEFAULT_WEIGHTS;
+      const rWeights = dItem.rowWeights || DEFAULT_WEIGHTS;
 
       dItem.layout.forEach((item, boxIdx) => {
         globalIndex++;
         const currentIndex = globalIndex;
         setTimeout(() => {
-          const rawW = item.colSpan * uW;
-          const rawD = item.rowSpan * uD;
-
-          const bW = Math.max(10, Math.round((rawW - dItem.clearance) * 10) / 10);
-          const bD = Math.max(10, Math.round((rawD - dItem.clearance) * 10) / 10);
-          const bH = Math.max(10, Math.round(actH * 10) / 10);
+          const metrics = computeBoxMetrics(
+            item,
+            dItem.dimensions,
+            dItem.clearance,
+            dItem.heightMargin,
+            cWeights,
+            rWeights
+          );
 
           const boxObj = {
-            width: bW,
-            depth: bD,
-            height: bH,
+            width: metrics.width,
+            depth: metrics.depth,
+            height: metrics.height,
             wallThickness: boxSettings.wallThickness,
             bottomThickness: boxSettings.bottomThickness
           };
@@ -535,7 +706,7 @@ export default function App() {
           const link = document.createElement('a');
           link.href = url;
           const sanitizeName = dItem.name.replace(/[^a-zA-Z0-9]/g, '_');
-          link.download = `3Dr_${sanitizeName}_Box_${boxIdx + 1}_${bW}x${bD}x${bH}mm.stl`;
+          link.download = `3Dr_${sanitizeName}_Box_${boxIdx + 1}_${metrics.width}x${metrics.depth}x${metrics.height}mm.stl`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
@@ -558,8 +729,13 @@ export default function App() {
       try {
         const parsed = JSON.parse(decodeURIComponent(configParam));
         if (parsed.drawersList && parsed.drawersList.length > 0) {
-          setDrawersList(parsed.drawersList);
-          setActiveDrawerId(parsed.drawersList[0].id);
+          const hydrated = parsed.drawersList.map(d => ({
+            ...d,
+            colWeights: d.colWeights || [...DEFAULT_WEIGHTS],
+            rowWeights: d.rowWeights || [...DEFAULT_WEIGHTS]
+          }));
+          setDrawersList(hydrated);
+          setActiveDrawerId(hydrated[0].id);
         }
       } catch (err) {
         console.error("Erreur de décodage du lien de configuration :", err);
@@ -569,13 +745,13 @@ export default function App() {
 
   const sendEmailOrder = async () => {
     if (!clientInfo.name || !clientInfo.email || !clientInfo.postalCode || !clientInfo.city || !clientInfo.address || !clientInfo.relayPoint) {
-      alert("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse postale, Point Mondial Relay).");
+      setDimWarning("Veuillez remplir tous les champs obligatoires (Nom, Email, Code Postal, Ville, Adresse postale, Point Mondial Relay).");
       return;
     }
 
     const oversizedBox = allDrawersBoxes.find(b => b.width > MAX_COMPARTMENT_SIZE || b.depth > MAX_COMPARTMENT_SIZE);
     if (oversizedBox) {
-      alert(`Erreur : Le compartiment (${oversizedBox.width}x${oversizedBox.depth} mm) dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm.`);
+      setDimWarning(`Erreur : Le compartiment (${oversizedBox.width}x${oversizedBox.depth} mm) dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm.`);
       return;
     }
 
@@ -661,7 +837,7 @@ export default function App() {
       setIsSending(false);
     } catch (error) {
       console.error("Erreur d'envoi EmailJS :", error);
-      alert("Une erreur est survenue lors de l'envoi : " + error.message);
+      setDimWarning("Une erreur est survenue lors de l'envoi : " + error.message);
       setIsSending(false);
     }
   };
@@ -678,60 +854,66 @@ export default function App() {
     const num = parseFloat(value);
     if (!isNaN(num) && num > 0) {
       setDrawer(prev => ({ ...prev, [field]: num }));
+      setDimWarning(null);
     }
   };
 
   const resetLayoutToDefault = () => {
-    setLayout([
-      { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 3 },
-      { id: '2', colStart: 3, rowStart: 0, colSpan: 3, rowSpan: 3 },
-      { id: '3', colStart: 0, rowStart: 3, colSpan: 3, rowSpan: 3 },
-      { id: '4', colStart: 3, rowStart: 3, colSpan: 3, rowSpan: 3 }
-    ]);
+    updateActiveDrawer(d => ({
+      ...d,
+      colWeights: [...DEFAULT_WEIGHTS],
+      rowWeights: [...DEFAULT_WEIGHTS],
+      layout: [
+        { id: '1', colStart: 0, rowStart: 0, colSpan: 3, rowSpan: 3 },
+        { id: '2', colStart: 3, rowStart: 0, colSpan: 3, rowSpan: 3 },
+        { id: '3', colStart: 0, rowStart: 3, colSpan: 3, rowSpan: 3 },
+        { id: '4', colStart: 3, rowStart: 3, colSpan: 3, rowSpan: 3 }
+      ]
+    }));
     setSelectionStart(null);
     setSelectionEnd(null);
+    setDimWarning(null);
   };
 
   const clearLayout = () => {
     setLayout([]);
     setSelectionStart(null);
     setSelectionEnd(null);
+    setDimWarning(null);
   };
 
   useEffect(() => {
-    const unitWidth = drawer.width / gridSize.cols;
-    const unitDepth = drawer.depth / gridSize.rows;
-    const actualHeight = Math.max(5, drawer.height - heightMargin);
-
-    const computedBoxes = layout.map((item) => {
-      const rawWidth = item.colSpan * unitWidth;
-      const rawDepth = item.rowSpan * unitDepth;
-
-      const boxWidth = Math.max(10, Math.round((rawWidth - clearance) * 10) / 10);
-      const boxDepth = Math.max(10, Math.round((rawDepth - clearance) * 10) / 10);
-      const boxHeight = Math.max(10, Math.round(actualHeight * 10) / 10);
-
-      const posX = item.colStart * unitWidth + clearance / 2;
-      const posY = item.rowStart * unitDepth + clearance / 2;
+    const computedBoxes = layout.map((item, idx) => {
+      const metrics = computeBoxMetrics(
+        item,
+        drawer,
+        clearance,
+        heightMargin,
+        colWeights,
+        rowWeights
+      );
 
       return {
         id: item.id,
-        x: posX,
-        y: posY,
-        width: boxWidth,
-        depth: boxDepth,
-        height: boxHeight,
+        x: metrics.x,
+        y: metrics.y,
+        width: metrics.width,
+        depth: metrics.depth,
+        height: metrics.height,
+        colStart: item.colStart,
+        rowStart: item.rowStart,
         colSpan: item.colSpan,
         rowSpan: item.rowSpan,
         wallThickness: boxSettings.wallThickness,
         bottomThickness: boxSettings.bottomThickness,
-        color: customColors[item.id] || getDimensionColor(item.colSpan, item.rowSpan)
+        color: customColors[item.id] || getDimensionColor(item.colSpan, item.rowSpan, idx)
       };
     });
 
     setBoxes(computedBoxes);
-  }, [drawer, heightMargin, clearance, layout, customColors]);
+  }, [drawer, heightMargin, clearance, colWeights, rowWeights, layout, customColors]);
 
+  // Détection de la cellule exacte sous le curseur/doigt en tenant compte des largeurs pondérées
   const getCellFromCoords = (clientX, clientY) => {
     if (!gridContainerRef.current) return null;
     const rect = gridContainerRef.current.getBoundingClientRect();
@@ -740,8 +922,29 @@ export default function App() {
 
     if (x < 0 || x > rect.width || y < 0 || y > rect.height) return null;
 
-    const col = Math.min(gridSize.cols - 1, Math.max(0, Math.floor((x / rect.width) * gridSize.cols)));
-    const row = Math.min(gridSize.rows - 1, Math.max(0, Math.floor((y / rect.height) * gridSize.rows)));
+    const totalColW = colWeights.reduce((a, b) => a + b, 0) || 6;
+    const targetColRatio = x / rect.width;
+    let col = gridSize.cols - 1;
+    let accCol = 0;
+    for (let c = 0; c < gridSize.cols; c++) {
+      accCol += colWeights[c] / totalColW;
+      if (targetColRatio <= accCol) {
+        col = c;
+        break;
+      }
+    }
+
+    const totalRowW = rowWeights.reduce((a, b) => a + b, 0) || 6;
+    const targetRowRatio = y / rect.height;
+    let row = gridSize.rows - 1;
+    let accRow = 0;
+    for (let r = 0; r < gridSize.rows; r++) {
+      accRow += rowWeights[r] / totalRowW;
+      if (targetRowRatio <= accRow) {
+        row = r;
+        break;
+      }
+    }
 
     return { row, col };
   };
@@ -796,15 +999,17 @@ export default function App() {
     const bounds = getSelectionBounds();
     if (!bounds) return;
 
-    const unitWidth = drawer.width / gridSize.cols;
-    const unitDepth = drawer.depth / gridSize.rows;
-    const testRawW = bounds.colSpan * unitWidth;
-    const testRawD = bounds.rowSpan * unitDepth;
-    const testBW = Math.max(10, Math.round((testRawW - clearance) * 10) / 10);
-    const testBD = Math.max(10, Math.round((testRawD - clearance) * 10) / 10);
+    const metrics = computeBoxMetrics(
+      bounds,
+      drawer,
+      clearance,
+      heightMargin,
+      colWeights,
+      rowWeights
+    );
 
-    if (testBW > MAX_COMPARTMENT_SIZE || testBD > MAX_COMPARTMENT_SIZE) {
-      alert(`Impossible de fusionner : ce compartiment ferait ${testBW}x${testBD} mm, ce qui dépasse la limite maximale autorisée de ${MAX_COMPARTMENT_SIZE}x${MAX_COMPARTMENT_SIZE} mm.`);
+    if (metrics.width > MAX_COMPARTMENT_SIZE || metrics.depth > MAX_COMPARTMENT_SIZE) {
+      setDimWarning(`Impossible de fusionner : ce compartiment ferait ${metrics.width}×${metrics.depth} mm (max ${MAX_COMPARTMENT_SIZE}×${MAX_COMPARTMENT_SIZE} mm).`);
       return;
     }
 
@@ -822,14 +1027,17 @@ export default function App() {
       );
     });
 
+    const newId = Date.now().toString();
     const newBox = {
-      id: Date.now().toString(),
+      id: newId,
       ...bounds
     };
 
     setLayout([...filteredLayout, newBox]);
+    setSelectedBoxId(newId);
     setSelectionStart(null);
     setSelectionEnd(null);
+    setDimWarning(null);
   };
 
   useEffect(() => {
@@ -1021,24 +1229,54 @@ export default function App() {
     }
   }, [drawer, boxes, selectedBoxId]);
 
-  const selectionBounds = getSelectionBounds();
+  // Pourcentages cumulés des colonnes et lignes pour l'affichage proportionnel du Plan 2D
+  const totalColWeight = colWeights.reduce((a, b) => a + b, 0) || 6;
+  const totalRowWeight = rowWeights.reduce((a, b) => a + b, 0) || 6;
 
-  const groupedBoxes = boxes.reduce((acc, box) => {
-    const key = `${box.colSpan}x${box.rowSpan}`;
-    if (!acc[key]) {
-      acc[key] = {
-        key,
-        colSpan: box.colSpan,
-        rowSpan: box.rowSpan,
-        width: box.width,
-        depth: box.depth,
-        height: box.height,
-        items: []
-      };
-    }
-    acc[key].items.push(box);
-    return acc;
-  }, {});
+  const colPercentWidths = colWeights.map(w => (w / totalColWeight) * 100);
+  const rowPercentHeights = rowWeights.map(w => (w / totalRowWeight) * 100);
+
+  const colPercentOffsets = [];
+  let accC = 0;
+  for (let i = 0; i < colPercentWidths.length; i++) {
+    colPercentOffsets.push(accC);
+    accC += colPercentWidths[i];
+  }
+
+  const rowPercentOffsets = [];
+  let accR = 0;
+  for (let i = 0; i < rowPercentHeights.length; i++) {
+    rowPercentOffsets.push(accR);
+    accR += rowPercentHeights[i];
+  }
+
+  const getSpanRectPercent = (colStart, colSpan, rowStart, rowSpan) => {
+    const left = colPercentOffsets[colStart] || 0;
+    const top = rowPercentOffsets[rowStart] || 0;
+    let width = 0;
+    for (let c = colStart; c < colStart + colSpan; c++) width += colPercentWidths[c] || 0;
+    let height = 0;
+    for (let r = rowStart; r < rowStart + rowSpan; r++) height += rowPercentHeights[r] || 0;
+    return { left, top, width, height };
+  };
+
+  const isCustomProportioned =
+    colWeights.some(w => Math.abs(w - colWeights[0]) > 0.001) ||
+    rowWeights.some(w => Math.abs(w - rowWeights[0]) > 0.001);
+
+  const selectionBounds = getSelectionBounds();
+  const selectionRect = selectionBounds
+    ? getSpanRectPercent(
+        selectionBounds.colStart,
+        selectionBounds.colSpan,
+        selectionBounds.rowStart,
+        selectionBounds.rowSpan
+      )
+    : null;
+
+  const selectionMetrics = selectionBounds
+    ? computeBoxMetrics(selectionBounds, drawer, clearance, heightMargin, colWeights, rowWeights)
+    : null;
 
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-100 font-sans text-slate-800 overflow-hidden pb-14 md:pb-0" onMouseUp={handleMouseUp}>
@@ -1106,7 +1344,10 @@ export default function App() {
             return (
               <div
                 key={dItem.id}
-                onClick={() => setActiveDrawerId(dItem.id)}
+                onClick={() => {
+                  setActiveDrawerId(dItem.id);
+                  setDimWarning(null);
+                }}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer shrink-0 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
@@ -1148,10 +1389,10 @@ export default function App() {
       </div>
 
       {showTip && (
-        <div className="md:hidden bg-amber-50 border-b border-amber-200 text-amber-900 p-2.5 text-xs font-medium flex items-start gap-2 shrink-0 animate-in fade-in duration-200">
+        <div className="md:hidden bg-amber-50 border-b border-amber-200 text-amber-900 p-2.5 text-xs font-medium flex items-start gap-2 shrink-0">
           <Info className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div className="flex-1 text-[11px] leading-tight">
-            <strong>Astuce :</strong> Basculez entre vos tiroirs en haut, glissez sur la grille 2D pour fusionner vos compartiments.
+            <strong>Astuce :</strong> Fusionnez vos cases sur le Plan 2D, puis saisissez vos cotes exactes en mm dans l'onglet Boîtes !
           </div>
           <button onClick={() => setShowTip(false)} className="text-amber-700 p-0.5">
             <X className="w-3.5 h-3.5" />
@@ -1359,7 +1600,7 @@ export default function App() {
       )}
 
       <div className="flex-1 flex overflow-hidden relative">
-        <div className={`w-full md:w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
+        <div className={`w-full md:w-85 bg-white border-r border-slate-200 flex flex-col overflow-y-auto shrink-0 ${mobileTab === '3d' ? 'hidden md:flex' : 'flex'}`}>
           
           {/* BULLE INFO PERSONNALISATION */}
           <div className="p-3.5 bg-gradient-to-r from-indigo-500 via-purple-600 to-indigo-700 text-white shadow-md border-b border-indigo-300 relative overflow-hidden shrink-0">
@@ -1480,9 +1721,19 @@ export default function App() {
                 Plan 2D ({activeDrawer.name})
               </h2>
               <div className="flex items-center gap-1">
+                {isCustomProportioned && (
+                  <button
+                    onClick={resetWeights}
+                    className="px-1.5 py-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded transition flex items-center gap-1 text-[10px] font-bold cursor-pointer"
+                    title="Réinitialiser les proportions (grille régulière)"
+                  >
+                    <Scaling className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Proportions</span>
+                  </button>
+                )}
                 <button
                   onClick={clearLayout}
-                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium"
+                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition flex items-center gap-1 text-[10px] font-medium cursor-pointer"
                   title="Vider ce tiroir"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1490,8 +1741,8 @@ export default function App() {
                 </button>
                 <button
                   onClick={resetLayoutToDefault}
-                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition"
-                  title="Réinitialiser"
+                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition cursor-pointer"
+                  title="Réinitialiser la grille"
                 >
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
@@ -1500,7 +1751,7 @@ export default function App() {
 
             <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2.5 flex items-center gap-1.5 leading-tight">
               <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-              <span>Faites glisser votre curseur pour fusionner les cases et créer un compartiment.</span>
+              <span>Glissez sur la grille pour fusionner, puis ajustez les mm exacts ci-dessous.</span>
             </p>
 
             <div 
@@ -1510,58 +1761,86 @@ export default function App() {
               style={{ aspectRatio: `${drawer.width} / ${drawer.depth}` }}
               className="relative w-full max-h-[300px] mx-auto border-2 border-slate-300 rounded-xl bg-slate-50 overflow-hidden shadow-inner select-none touch-none"
             >
+              {/* Calque 0 : Compartiments aux dimensions pondérées réelles */}
               <div className="absolute inset-0 z-0">
-                {layout.map((b) => {
-                  const leftPercent = (b.colStart / gridSize.cols) * 100;
-                  const topPercent = (b.rowStart / gridSize.rows) * 100;
-                  const widthPercent = (b.colSpan / gridSize.cols) * 100;
-                  const heightPercent = (b.rowSpan / gridSize.rows) * 100;
-                  const color = customColors[b.id] || getDimensionColor(b.colSpan, b.rowSpan);
-                  const isLightColor = color === '#e2e8f0' || color === '#FFD700';
+                {boxes.map((b) => {
+                  const rect = getSpanRectPercent(b.colStart, b.colSpan, b.rowStart, b.rowSpan);
+                  const isLightColor = b.color === '#e2e8f0' || b.color === '#FFD700';
+                  const isSelected = b.id === selectedBoxId;
 
                   return (
                     <div
                       key={b.id}
-                      className={`absolute rounded-lg flex items-center justify-center transition-all shadow-xs ${
-                        isLightColor ? 'border-2 border-slate-400' : 'border-2 border-white/80'
+                      className={`absolute rounded-lg flex flex-col items-center justify-center transition-all shadow-xs p-0.5 overflow-hidden ${
+                        isSelected
+                          ? 'ring-2 ring-indigo-600 z-10'
+                          : isLightColor
+                          ? 'border-2 border-slate-400'
+                          : 'border-2 border-white/80'
                       }`}
                       style={{
-                        left: `${leftPercent}%`,
-                        top: `${topPercent}%`,
-                        width: `${widthPercent}%`,
-                        height: `${heightPercent}%`,
-                        backgroundColor: color
+                        left: `${rect.left}%`,
+                        top: `${rect.top}%`,
+                        width: `${rect.width}%`,
+                        height: `${rect.height}%`,
+                        backgroundColor: b.color
                       }}
                     >
-                      <span className={`text-[11px] font-extrabold shadow-xs px-1.5 py-0.5 rounded ${
-                        isLightColor ? 'text-slate-900 bg-slate-900/10 backdrop-blur-xs' : 'text-slate-900 bg-white/85'
+                      <span className={`text-[10px] font-black leading-tight shadow-xs px-1.5 py-0.5 rounded text-center truncate max-w-full ${
+                        isLightColor ? 'text-slate-900 bg-slate-900/10 backdrop-blur-xs' : 'text-slate-900 bg-white/90'
                       }`}>
-                        {b.colSpan}×{b.rowSpan}
+                        {b.width}×{b.depth}
                       </span>
+                      {rect.width > 18 && rect.height > 18 && (
+                        <span className="text-[8px] font-bold text-slate-900/75 mt-0.5 leading-none">
+                          {b.colSpan}×{b.rowSpan}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              <div className="absolute inset-0 z-10 pointer-events-none grid grid-cols-6 grid-rows-6">
+              {/* Calque 1 : Grille pointillée pondérée */}
+              <div
+                className="absolute inset-0 z-10 pointer-events-none grid"
+                style={{
+                  gridTemplateColumns: colWeights.map(w => `${w}fr`).join(' '),
+                  gridTemplateRows: rowWeights.map(w => `${w}fr`).join(' ')
+                }}
+              >
                 {Array.from({ length: 36 }).map((_, idx) => (
                   <div key={idx} className="border border-dashed border-slate-900/20" />
                 ))}
               </div>
 
-              {selectionBounds && (
+              {/* Calque 2 : Sélection en cours */}
+              {selectionRect && (
                 <div
-                  className="absolute z-20 border-2 border-indigo-600 bg-indigo-500/30 rounded-lg pointer-events-none transition-all"
+                  className="absolute z-20 border-2 border-indigo-600 bg-indigo-500/30 rounded-lg pointer-events-none transition-all flex items-center justify-center"
                   style={{
-                    left: `${(selectionBounds.colStart / gridSize.cols) * 100}%`,
-                    top: `${(selectionBounds.rowStart / gridSize.rows) * 100}%`,
-                    width: `${(selectionBounds.colSpan / gridSize.cols) * 100}%`,
-                    height: `${(selectionBounds.rowSpan / gridSize.rows) * 100}%`
+                    left: `${selectionRect.left}%`,
+                    top: `${selectionRect.top}%`,
+                    width: `${selectionRect.width}%`,
+                    height: `${selectionRect.height}%`
                   }}
-                />
+                >
+                  {selectionMetrics && (
+                    <span className="bg-indigo-700 text-white text-[10px] font-black px-1.5 py-0.5 rounded shadow">
+                      {selectionMetrics.width}×{selectionMetrics.depth} mm
+                    </span>
+                  )}
+                </div>
               )}
 
-              <div className="absolute inset-0 z-30 grid grid-cols-6 grid-rows-6 cursor-pointer">
+              {/* Calque 3 : Cellules interactives pondérées */}
+              <div
+                className="absolute inset-0 z-30 grid cursor-pointer"
+                style={{
+                  gridTemplateColumns: colWeights.map(w => `${w}fr`).join(' '),
+                  gridTemplateRows: rowWeights.map(w => `${w}fr`).join(' ')
+                }}
+              >
                 {Array.from({ length: gridSize.rows }).map((_, r) =>
                   Array.from({ length: gridSize.cols }).map((_, c) => (
                     <div
@@ -1576,108 +1855,165 @@ export default function App() {
               </div>
             </div>
 
-            {selectionBounds && (
+            {selectionBounds && selectionMetrics && (
               <button
                 onClick={mergeSelectedArea}
                 className="mt-2.5 w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Combine className="w-4 h-4" />
-                Fusionner ({selectionBounds.colSpan}×{selectionBounds.rowSpan})
+                Fusionner ({selectionMetrics.width}×{selectionMetrics.depth} mm)
               </button>
             )}
           </div>
 
-          {/* Section 3 : Boîtes */}
+          {/* Section 3 : Boîtes & Cotes Exactes */}
           <div className={`p-3.5 sm:p-4 flex-1 ${mobileTab === '2d' ? 'hidden md:block' : 'block'}`}>
             <div className="flex items-center justify-between mb-2">
               <h2 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2">
                 <span className="bg-amber-400 text-slate-950 w-5 h-5 rounded-full inline-flex items-center justify-center font-black text-xs shadow-xs">3</span>
                 <Layers className="w-3.5 h-3.5 text-indigo-600" />
-                Boîtes du tiroir ({boxes.length})
+                Boîtes & Cotes Exactes ({boxes.length})
               </h2>
+              {isCustomProportioned && (
+                <button
+                  onClick={resetWeights}
+                  className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 underline cursor-pointer"
+                >
+                  Réinit. proportions
+                </button>
+              )}
             </div>
 
-            <div className="md:hidden space-y-2">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center justify-between">
-                  <span>Résumé des compartiments</span>
-                  <span className="bg-indigo-100 text-indigo-700 text-[10px] px-2 py-0.5 rounded-full font-black">
-                    {boxes.length} boîte(s)
-                  </span>
-                </h4>
-                
-                <div className="space-y-1.5">
-                  {Object.values(groupedBoxes).map((group) => (
-                    <div key={group.key} className="flex items-center justify-between bg-white p-2 rounded-lg border border-slate-200 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: getDimensionColor(group.colSpan, group.rowSpan) }} />
-                        <span className="font-bold text-slate-800">{group.items.length}x Boîte {group.colSpan}×{group.rowSpan}</span>
-                      </div>
-                      <span className="text-[10px] font-mono text-slate-500">
-                        {group.width}×{group.depth} mm
-                      </span>
-                    </div>
-                  ))}
-                </div>
+            {dimWarning && (
+              <div className="mb-2.5 p-2 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-[10px] font-bold flex items-start gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <span className="flex-1">{dimWarning}</span>
+                <button onClick={() => setDimWarning(null)} className="text-amber-700 hover:text-amber-950">
+                  <X className="w-3 h-3" />
+                </button>
               </div>
+            )}
 
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Couleurs par boîte :</span>
-                {boxes.map((box, idx) => (
-                  <div key={box.id} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs">
-                    <span className="font-medium text-slate-700"># {idx + 1} ({box.colSpan}×{box.rowSpan})</span>
-                    <div className="flex items-center gap-1">
-                      {standardColors.filter(c => !c.disabled).map(c => (
-                        <button
-                          key={c.name}
-                          onClick={() => setCustomColors(prev => ({ ...prev, [box.id]: c.hex }))}
-                          className={`w-5 h-5 rounded-full border transition ${box.color === c.hex ? 'ring-2 ring-indigo-500 scale-110 border-white' : 'border-slate-300 opacity-80'}`}
-                          style={{ backgroundColor: c.hex }}
-                          title={c.name}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2.5 flex items-center gap-1.5 leading-tight">
+              <Scaling className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+              <span>Saisissez vos dimensions exactes (mm) : les boîtes voisines s'ajustent automatiquement.</span>
+            </p>
 
-            <div className="hidden md:block space-y-2">
-              <p className="text-[10px] text-indigo-900 bg-indigo-50 border border-indigo-200 font-bold p-2 rounded-lg mb-2 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span>Cliquez sur la pastille pour changer la couleur.</span>
-              </p>
-
+            {/* Liste unifiée Desktop & Mobile avec saisie directe Longueur/Largeur mm + couleur */}
+            <div className="space-y-2.5">
               {boxes.map((box, idx) => {
                 const isPickerOpen = activeColorPickerId === box.id;
+                const isSelected = selectedBoxId === box.id;
+                const widthInputVal = boxDimInputs[box.id]?.width ?? String(box.width);
+                const depthInputVal = boxDimInputs[box.id]?.depth ?? String(box.depth);
+                const fullWidthLocked = box.colSpan >= gridSize.cols;
+                const fullDepthLocked = box.rowSpan >= gridSize.rows;
 
                 return (
                   <div key={box.id} className="relative">
                     <div 
-                      onClick={() => setSelectedBoxId(box.id === selectedBoxId ? null : box.id)}
-                      className={`p-2.5 rounded-xl border transition cursor-pointer flex items-center justify-between ${
-                        selectedBoxId === box.id 
+                      onClick={() => setSelectedBoxId(isSelected ? null : box.id)}
+                      className={`p-2.5 rounded-xl border transition cursor-pointer space-y-2 ${
+                        isSelected 
                           ? 'border-indigo-500 bg-indigo-50/50 shadow-xs' 
                           : 'border-slate-200 hover:border-slate-300 bg-white'
                       }`}
                     >
-                      <div className="flex items-center space-x-3">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveColorPickerId(isPickerOpen ? null : box.id);
-                          }}
-                          className="w-6 h-6 rounded-full flex-shrink-0 border-2 border-white ring-2 ring-slate-200 hover:scale-110 transition-transform shadow-xs cursor-pointer"
-                          style={{ backgroundColor: box.color }}
-                          title="Changer la couleur"
-                        />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveColorPickerId(isPickerOpen ? null : box.id);
+                            }}
+                            className="w-6 h-6 rounded-full flex-shrink-0 border-2 border-white ring-2 ring-slate-200 hover:scale-110 transition-transform shadow-xs cursor-pointer"
+                            style={{ backgroundColor: box.color }}
+                            title="Changer la couleur"
+                          />
+
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <span>Compartiment #{idx + 1}</span>
+                              <span className="text-[9px] font-extrabold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
+                                {box.colSpan}×{box.rowSpan}
+                              </span>
+                            </h4>
+                            <p className="text-[10px] text-slate-500 font-mono">
+                              Hauteur : {box.height} mm
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Pastilles rapides sur mobile */}
+                        <div className="flex md:hidden items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                          {standardColors.filter(c => !c.disabled).map(c => (
+                            <button
+                              key={c.name}
+                              onClick={() => setCustomColors(prev => ({ ...prev, [box.id]: c.hex }))}
+                              className={`w-4 h-4 rounded-full border transition ${box.color === c.hex ? 'ring-2 ring-indigo-500 scale-110 border-white' : 'border-slate-300 opacity-80'}`}
+                              style={{ backgroundColor: c.hex }}
+                              title={c.name}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Champs d'édition directe des cotes exactes (Longueur / Largeur en mm) */}
+                      <div 
+                        className="grid grid-cols-2 gap-2 pt-1.5 border-t border-slate-100"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">
+                            Longueur (mm)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="1"
+                              min={MIN_TRACK_SIZE}
+                              max={MAX_COMPARTMENT_SIZE}
+                              disabled={fullWidthLocked}
+                              value={widthInputVal}
+                              onFocus={() => setSelectedBoxId(box.id)}
+                              onChange={(e) => handleBoxDimInputChange(box.id, 'width', e.target.value)}
+                              onBlur={() => handleBoxDimBlur(box)}
+                              title={fullWidthLocked ? "Occupe toute la longueur du tiroir" : "Saisir la longueur exacte en mm"}
+                              className={`w-full px-2 py-1 rounded-lg text-xs font-bold border focus:outline-none pr-6 ${
+                                fullWidthLocked
+                                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                                  : 'bg-indigo-50/60 text-indigo-900 border-indigo-200 focus:border-indigo-500 focus:bg-white'
+                              }`}
+                            />
+                            <span className="absolute right-1.5 top-1.5 text-[9px] font-bold text-slate-400 pointer-events-none">mm</span>
+                          </div>
+                        </div>
 
                         <div>
-                          <h4 className="text-xs font-bold text-slate-800">Compartiment #{idx + 1}</h4>
-                          <p className="text-[10px] text-slate-500 font-mono mt-0.5">
-                            {box.width}×{box.depth}×{box.height} mm
-                          </p>
+                          <label className="block text-[9px] font-bold text-slate-500 uppercase mb-0.5">
+                            Largeur (mm)
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="number"
+                              step="1"
+                              min={MIN_TRACK_SIZE}
+                              max={MAX_COMPARTMENT_SIZE}
+                              disabled={fullDepthLocked}
+                              value={depthInputVal}
+                              onFocus={() => setSelectedBoxId(box.id)}
+                              onChange={(e) => handleBoxDimInputChange(box.id, 'depth', e.target.value)}
+                              onBlur={() => handleBoxDimBlur(box)}
+                              title={fullDepthLocked ? "Occupe toute la largeur du tiroir" : "Saisir la largeur exacte en mm"}
+                              className={`w-full px-2 py-1 rounded-lg text-xs font-bold border focus:outline-none pr-6 ${
+                                fullDepthLocked
+                                  ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+                                  : 'bg-indigo-50/60 text-indigo-900 border-indigo-200 focus:border-indigo-500 focus:bg-white'
+                              }`}
+                            />
+                            <span className="absolute right-1.5 top-1.5 text-[9px] font-bold text-slate-400 pointer-events-none">mm</span>
+                          </div>
                         </div>
                       </div>
                     </div>
